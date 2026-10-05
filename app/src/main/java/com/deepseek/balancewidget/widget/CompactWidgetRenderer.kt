@@ -7,12 +7,22 @@ import com.deepseek.balancewidget.R
 import com.deepseek.balancewidget.core.WidgetState
 
 /**
- * 2×2 紧凑插件的渲染（浅色主题：白底 + 蓝色描边）。
+ * 2×2 紧凑插件的渲染（浅色主题：柔和白底 + 蓝色描边）。
  *
- * 内容：标题 + 刷新按钮 / 余额大字 / 今日已用 / 峰谷胶囊 + 倒计时。
- * 配色与 4×2 深色版完全独立，两边互不影响。
+ * 插件是「双层」的：
+ * - 封面层 [buildCover]：整张图片，点一下翻到数据层；
+ * - 数据层 [build]：余额大字 / 今日已用 / 峰谷胶囊 + 倒计时 / 一个刷新按钮，
+ *   点卡片其它地方翻回封面层，点 ↻ 立即刷新。
+ *
+ * 翻面状态按 widgetId 存在 [com.deepseek.balancewidget.data.CompactFaceStore]。
  */
 object CompactWidgetRenderer {
+
+    /** 翻面动作：点封面 → 数据面，点数据面 → 封面。 */
+    const val ACTION_FLIP = "com.deepseek.balancewidget.action.COMPACT_FLIP"
+
+    /** 翻面的 requestCode 基数，实际用 base + widgetId 区分不同插件实例。 */
+    private const val FLIP_REQUEST_CODE_BASE = 1000
 
     /** 主色：标题、余额、描边。 */
     private const val COLOR_BRAND = 0xFF3A55A8.toInt()
@@ -22,10 +32,22 @@ object CompactWidgetRenderer {
     private const val COLOR_ACCENT_OFF_PEAK = 0xFF2FA05A.toInt()
     private const val COLOR_ACCENT_PEAK = 0xFFE0902A.toInt()
 
+    /** 封面层：整张图片，点一下翻到数据面。 */
+    fun buildCover(context: Context, widgetId: Int): RemoteViews {
+        val views = RemoteViews(context.packageName, R.layout.widget_balance_compact_cover)
+        views.setOnClickPendingIntent(
+            R.id.compact_cover_root,
+            flipIntent(context, widgetId),
+        )
+        return views
+    }
+
+    /** 数据层。 */
     fun build(
         context: Context,
         state: WidgetState,
         showSeconds: Boolean = true,
+        widgetId: Int = -1,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_balance_compact)
         val peak = state.tier.isPeak
@@ -67,8 +89,8 @@ object CompactWidgetRenderer {
         )
         views.setTextColor(R.id.compact_tier, COLOR_PILL_TEXT)
 
-        // 倒计时（等宽数字，秒数跳动不抖）
-        views.setTextViewText(R.id.compact_countdown, state.countdownText(showSeconds))
+        // 倒计时：累计小时制（57:16:52），窄卡片上不会被截断
+        views.setTextViewText(R.id.compact_countdown, state.countdownTextCompact(showSeconds))
         views.setTextColor(R.id.compact_countdown, accent)
 
         // 刷新按钮：请求中变半透明（setFloat 需 API 31+，低版本跳过这层反馈）
@@ -81,8 +103,17 @@ object CompactWidgetRenderer {
             R.id.compact_refresh,
             WidgetIntents.broadcast(context, WidgetRenderer.ACTION_REFRESH, 11),
         )
-        views.setOnClickPendingIntent(R.id.compact_root, WidgetIntents.openApp(context, 12))
+        // 点卡片其它地方 → 翻回封面层
+        views.setOnClickPendingIntent(R.id.compact_root, flipIntent(context, widgetId))
 
         return views
     }
+
+    private fun flipIntent(context: Context, widgetId: Int) =
+        WidgetIntents.broadcast(
+            context,
+            ACTION_FLIP,
+            FLIP_REQUEST_CODE_BASE + widgetId.coerceAtLeast(0),
+            appWidgetId = widgetId.takeIf { it >= 0 },
+        )
 }

@@ -74,6 +74,7 @@
             <intent-filter>
                 <action android:name="com.deepseek.balancewidget.action.REFRESH" />
                 <action android:name="com.deepseek.balancewidget.action.TOGGLE_TIER" />
+                <action android:name="com.deepseek.balancewidget.action.COMPACT_FLIP" />
                 <action android:name="com.deepseek.balancewidget.action.NOTIF_REFRESH" />
                 <action android:name="com.deepseek.balancewidget.action.NOTIF_TOGGLE_TIER" />
             </intent-filter>

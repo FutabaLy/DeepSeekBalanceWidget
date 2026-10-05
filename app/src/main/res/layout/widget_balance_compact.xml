@@ -38,6 +38,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:ellipsize="end"
+            android:fontFamily="sans-serif-black"
             android:letterSpacing="0.02"
             android:maxLines="1"
             android:text="@string/widget_title_default"
@@ -62,6 +63,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:ellipsize="end"
+        android:fontFamily="sans-serif-black"
         android:includeFontPadding="false"
         android:letterSpacing="0.02"
         android:maxLines="1"
@@ -80,7 +82,8 @@
         android:maxLines="1"
         android:text="@string/widget_used_placeholder"
         android:textColor="#8A93A6"
-        android:textSize="11sp" />
+        android:textSize="11sp"
+        android:textStyle="bold" />
 
     <!-- 第四行：峰/谷胶囊 + 倒计时 -->
     <LinearLayout
@@ -96,6 +99,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_compact_pill_off_peak"
+            android:fontFamily="sans-serif-black"
             android:gravity="center"
             android:minWidth="26dp"
             android:paddingStart="9dp"
@@ -119,6 +123,7 @@
             android:maxLines="1"
             android:text="@string/widget_countdown_placeholder"
             android:textColor="#2FA05A"
-            android:textSize="14sp" />
+            android:textSize="14sp"
+            android:textStyle="bold" />
     </LinearLayout>
 </LinearLayout>

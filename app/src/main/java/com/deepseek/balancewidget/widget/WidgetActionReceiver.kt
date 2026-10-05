@@ -1,11 +1,13 @@
 package com.deepseek.balancewidget.widget
 
 import android.app.NotificationManager
+import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.deepseek.balancewidget.data.AppSettings
+import com.deepseek.balancewidget.data.CompactFaceStore
 import com.deepseek.balancewidget.service.BalanceService
 import com.deepseek.balancewidget.service.Notifier
 
@@ -35,8 +37,24 @@ class WidgetActionReceiver : BroadcastReceiver() {
             Notifier.ACTION_TOGGLE_TIER,
             -> toggleTierMode(context)
 
+            CompactWidgetRenderer.ACTION_FLIP -> {
+                val widgetId = intent?.getIntExtra(
+                    AppWidgetManager.EXTRA_APPWIDGET_ID,
+                    AppWidgetManager.INVALID_APPWIDGET_ID,
+                ) ?: AppWidgetManager.INVALID_APPWIDGET_ID
+                flipCompactWidget(context, widgetId)
+            }
+
             else -> Unit
         }
+    }
+
+    /** 2×2 插件翻面：封面图 ⇄ 数据面（只重画被点的那个实例）。 */
+    private fun flipCompactWidget(context: Context, widgetId: Int) {
+        if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+        val nowCover = CompactFaceStore.toggle(context, widgetId)
+        CompactBalanceWidgetProvider.updateOne(context, widgetId)
+        Log.i(TAG, "2×2 插件 $widgetId 翻面 → ${if (nowCover) "封面图" else "数据面"}")
     }
 
     /** 在「自动 → 强制高峰 → 强制谷时」之间循环，用于系统时间不准或想提前摸底。 */

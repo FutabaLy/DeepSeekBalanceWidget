@@ -59,6 +59,15 @@ data class WidgetState(
         return if (showSeconds) PeakScheduler.formatCountdown(ms) else formatMinutes(ms)
     }
 
+    /**
+     * 紧凑插件的倒计时文本：不出现「天」，小时数累计（2天08小时 → 56:53:12），
+     * 避免 2×2 卡片上被截断成「2天08小…」。
+     */
+    fun countdownTextCompact(showSeconds: Boolean): String {
+        val ms = countdownMillis
+        return if (showSeconds) PeakScheduler.formatCountdownHours(ms) else formatMinutes(ms)
+    }
+
     /** 状态行：正常显示同步时间，异常显示错误。 */
     fun statusText(): String = when {
         lastError != null -> lastError

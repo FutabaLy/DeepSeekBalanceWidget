@@ -38,7 +38,8 @@
 
 - **两种尺寸的桌面插件**：
   - **4×2 大卡片**（深色）：大字余额 + 峰/谷徽章 + 距下次切换的倒计时 + 赠金/充值明细；
-  - **2×2 紧凑卡片**（浅色，白底蓝框）：余额 + **今日已用** + 峰/谷胶囊 + 倒计时，一个刷新按钮；
+  - **2×2 紧凑卡片**（浅色，柔和蓝白底 + 蓝框）：**正面是封面图，点一下翻到数据面**
+    （余额 + 今日已用 + 峰/谷胶囊 + 累计小时倒计时），再点一下翻回封面；只有一个刷新按钮；
   - 两者共用同一份数据与同一条刷新链路，桌面上放哪个、放几个都行
 - **今日已用**：靠相邻两次刷新的余额差值累计（余额变大视为充值，不冲抵已用），北京时间跨天自动归零
 - **默认 5 秒刷新余额**，可在 5/10/15/30/60/120/300 秒之间调整
@@ -117,7 +118,7 @@ gradle :app:assembleDebug        # 出调试包
 3. 按提示完成小米保活设置（见第 6 节，**这步不做的话刷新会被系统冻结**）；
 4. 回到桌面，**长按空白处 → 添加小部件 / 桌面工具**，两种尺寸任选：
    - 「**DeepSeek 余额与峰谷**」—— 4×2 深色大卡片，信息最全；
-   - 「**DeepSeek 余额（2×2 紧凑）**」—— 2×2 白底蓝框，适合和别的图标挤在一起；
+   - 「**DeepSeek 余额（2×2 紧凑）**」—— 2×2 柔和浅色卡片，**正面是封面图，点一下翻到数据面**；
    拖到桌面即可；
 5. 如果是从桌面添加的插件，系统会先跳到配置页，点 **完成，放到桌面**。
 
@@ -188,6 +189,7 @@ DeepSeekBalanceWidget/
 │  │  ├─ data/
 │  │  │  ├─ DeepSeekApi.kt                # /user/balance 响应解析（纯函数，可单测）
 │  │  │  ├─ DailyUsageStore.kt            # 今日已用累计（微元 Long 存取，跨天归零）
+│  │  │  ├─ CompactFaceStore.kt           # 2×2 翻面状态（封面图 ⇄ 数据面，按 widgetId 存）
 │  │  │  ├─ BalanceRepository.kt          # OkHttp 请求 + 错误映射（401/402/429/网络）
 │  │  │  ├─ AppSettings.kt                # 设置项（StateFlow）
 │  │  │  ├─ BalanceStore.kt               # 余额快照缓存（进程被杀也不掉数字）
@@ -209,12 +211,15 @@ DeepSeekBalanceWidget/
 │  │     └─ WidgetWorkScheduler.kt        # 周期 + 立即任务调度
 │  ├─ res/layout/widget_balance.xml       # ★ 4×2 插件布局（只用 RemoteViews 支持的控件）
 │  ├─ res/layout/widget_balance_compact.xml # ★ 2×2 插件布局
+│  ├─ res/layout/widget_balance_compact_cover.xml # ★ 2×2 封面层布局（整张图）
+│  ├─ res/drawable-nodpi/compact_cover.webp # 2×2 封面图（圆角已烧进图片，见 docs/make_cover.py）
 │  ├─ res/xml/widget_balance_info.xml     # 4×2 插件元数据（可缩放、配置页）
 │  └─ res/xml/widget_balance_compact_info.xml # 2×2 插件元数据（targetCell 2×2）
 ├─ app/src/test/...                       # 单元测试：峰谷判定 + 余额解析
 └─ docs/
    ├─ widget-preview.png                  # 预览图
    ├─ make_preview.py                     # 预览图生成脚本
+   ├─ make_cover.py                       # 2×2 封面图（圆角 + WebP 压缩）生成脚本
    └─ verify_peak_logic.py                # 峰谷逻辑独立验证（全年逐分钟扫描）
 ```
 
@@ -234,7 +239,7 @@ Android 的桌面插件本身最快只能半小时刷新一次，5 秒级别必�
 
 ### 已做的正确性验证
 
-- `app/src/test/.../PeakSchedulerTest.kt`：22 个用例，覆盖工作日/午间谷/周末/节假日/调休补班/跨周末切换/边界前后一致性/倒计时格式；
+- `app/src/test/.../PeakSchedulerTest.kt`：23 个用例，覆盖工作日/午间谷/周末/节假日/调休补班/跨周末切换/边界前后一致性/倒计时格式（含 2×2 的累计小时写法）；
 - `app/src/test/.../DeepSeekApiTest.kt`：9 个用例，覆盖官方示例响应、多币种、余额为零、鉴权失败、非法 JSON、Key 粗校验；
 - `app/src/test/.../DailyUsageStoreTest.kt`：6 个用例，覆盖「今日已用」的跨天归零、首次无基准、连续扣费累加、充值不冲抵、微元解析精度；
 - `docs/verify_peak_logic.py`：用 Python 独立复刻同一套算法，对 2026 全年 **525,600 个时刻逐分钟扫描**，

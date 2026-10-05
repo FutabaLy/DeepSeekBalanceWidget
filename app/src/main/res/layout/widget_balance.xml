@@ -98,13 +98,14 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:ellipsize="end"
+            android:fontFamily="sans-serif-black"
             android:gravity="center_vertical"
             android:includeFontPadding="false"
             android:letterSpacing="0.02"
             android:maxLines="1"
             android:text="@string/widget_balance_placeholder"
             android:textColor="#FFFFFF"
-            android:textSize="27sp"
+            android:textSize="31sp"
             android:textStyle="bold" />
 
         <!-- 倒计时 + 休/班标记 + 刷新按钮 -->

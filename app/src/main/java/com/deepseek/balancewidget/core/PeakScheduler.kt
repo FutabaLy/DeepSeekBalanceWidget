@@ -122,5 +122,19 @@ object PeakScheduler {
         }
     }
 
+    /**
+     * 累计小时制倒计时，例如 `57:16:52`（= 57 小时 16 分 52 秒）。
+     *
+     * 紧凑插件（2×2）用这个代替 [formatCountdown]：带「天」的写法在窄卡片上会被截断
+     * （「2天08小…」），小时数直接累加既短又一眼能看出还有多久。
+     */
+    fun formatCountdownHours(millis: Long): String {
+        val total = (millis / 1000).coerceAtLeast(0)
+        val h = total / 3_600
+        val m = total % 3_600 / 60
+        val s = total % 60
+        return "${two(h)}:${two(m)}:${two(s)}"
+    }
+
     private fun two(v: Long): String = if (v < 10) "0$v" else v.toString()
 }

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  2×2 紧凑插件的封面（第一层）：整张图片铺满，点一下翻到数据面。
+
+  图片四角是透明圆角（见 docs/make_cover.py），所以贴到桌面就是圆角的，
+  不需要再套一层卡片背景。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/compact_cover_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/compact_cover_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/widget_compact_cover_desc"
+        android:scaleType="centerCrop"
+        android:src="@drawable/compact_cover" />
+</FrameLayout>

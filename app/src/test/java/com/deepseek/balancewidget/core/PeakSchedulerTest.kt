@@ -212,6 +212,20 @@ class PeakSchedulerTest {
     }
 
     @Test
+    fun `紧凑版倒计时把天折算成小时`() {
+        // 2 天 08 小时 53 分 12 秒 → 56:53:12（不出现「天」，窄卡片放得下）
+        val twoDays = (2L * 86_400 + 8 * 3600 + 53 * 60 + 12) * 1000
+        assertEquals("56:53:12", PeakScheduler.formatCountdownHours(twoDays))
+        // 跨整个国庆假期（最多 10 天）也不会超过 3 位小时
+        assertEquals("240:00:00", PeakScheduler.formatCountdownHours(10L * 86_400 * 1000))
+        assertEquals("00:00:05", PeakScheduler.formatCountdownHours(5_000))
+        assertEquals("00:00:00", PeakScheduler.formatCountdownHours(0))
+        assertEquals("00:00:00", PeakScheduler.formatCountdownHours(-500))
+        // 与「带天」的写法指向同一时刻（4×2 仍然用带天的版本）
+        assertEquals("2天08小时53分", PeakScheduler.formatCountdown(twoDays))
+    }
+
+    @Test
     fun `档位标签可用于插件徽章`() {
         assertEquals("峰", TariffTier.PEAK.shortLabel)
         assertEquals("谷", TariffTier.OFF_PEAK.shortLabel)
