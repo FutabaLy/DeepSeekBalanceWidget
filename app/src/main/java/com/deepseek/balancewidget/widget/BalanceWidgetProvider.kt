@@ -1,20 +1,18 @@
 package com.deepseek.balancewidget.widget
 
-import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import com.deepseek.balancewidget.MainActivity
 import com.deepseek.balancewidget.core.DateUtil
 import com.deepseek.balancewidget.core.HolidayCalendar
 import com.deepseek.balancewidget.data.AppSettings
 import com.deepseek.balancewidget.data.BalanceStore
 import com.deepseek.balancewidget.core.WidgetState
 import com.deepseek.balancewidget.service.BalanceService
+import com.deepseek.balancewidget.worker.WidgetWorkScheduler
 
 /**
  * 桌面插件入口。
@@ -39,7 +37,9 @@ class BalanceWidgetProvider : AppWidgetProvider() {
         for (id in appWidgetIds) {
             val views = WidgetRenderer.build(context, state, settings.tickEverySecond.value, interval)
             appWidgetManager.updateAppWidget(id, views)
-            maybeStartConfigure(context, appWidgetManager, id)
+            // 「用户主动重配置」由系统依据 widget_balance_info.xml 里的
+            // android:widgetFeatures="reconfigurable" + android:configure 直接拉起 MainActivity，
+            // 这里既不需要也无法再自己弹一次配置页。
         }
 
         Log.i(TAG, "onUpdate：${appWidgetIds.size} 个插件实例")
@@ -82,33 +82,6 @@ class BalanceWidgetProvider : AppWidgetProvider() {
             BalanceService.stop(context)
             WidgetWorkScheduler.cancelPeriodic(context)
         }
-    }
-
-    /** 已配置过密钥却仍走到这里（例如系统重配置），自动打开设置页让用户可改。 */
-    private fun maybeStartConfigure(
-        context: Context,
-        manager: AppWidgetManager,
-        widgetId: Int,
-    ) {
-        val options = runCatching { manager.getAppWidgetOptions(widgetId) }.getOrNull() ?: return
-        val needReconfigure = options.getBoolean(AppWidgetManager.OPTION_APPWIDGET_RECONFIGURE, false)
-        // 正常添加流程由 appwidget-provider 的 android:configure 接管，这里只处理「用户主动重配置」，
-        // 避免和系统配置流程重复弹窗。
-        if (!needReconfigure) return
-        if (AppSettings.get(context).apiKey.value.isBlank()) return
-
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-        }
-        val pending = PendingIntent.getActivity(
-            context,
-            widgetId,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        runCatching { pending.send() }
-            .onFailure { Log.w(TAG, "无法自动打开配置页（部分系统限制后台启动 Activity）", it) }
     }
 
     companion object {

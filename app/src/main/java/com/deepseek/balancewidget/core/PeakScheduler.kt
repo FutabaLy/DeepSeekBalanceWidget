@@ -1,6 +1,5 @@
 package com.deepseek.balancewidget.core
 
-import com.deepseek.balancewidget.data.HolidayCalendar
 import java.time.DayOfWeek
 import java.time.Duration
 import java.time.LocalDate

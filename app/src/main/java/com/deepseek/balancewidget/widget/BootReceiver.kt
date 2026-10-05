@@ -38,7 +38,7 @@ class BootReceiver : BroadcastReceiver() {
 
         val settings = AppSettings.get(context)
         if (settings.apiKey.value.isNotBlank() && settings.serviceEnabled.value) {
-            if (ServiceController.isAlive(context) || isIgnoringBatteryOptimizations(context)) {
+            if (ServiceController.isServiceAlive(context) || isIgnoringBatteryOptimizations(context)) {
                 runCatching { ServiceController.start(context) }
                     .onFailure { Log.w(TAG, "开机后拉起服务失败：${it.message}") }
             } else {
