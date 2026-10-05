@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 峰/谷徽章：圆角胶囊，代码里按档位着色（峰=琥珀，谷=青绿） -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="100dp" />
+    <solid android:color="#1FFFFFFF" />
+</shape>

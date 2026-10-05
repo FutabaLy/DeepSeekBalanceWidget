@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#1B6BFF</color>
+    <color name="brand_peak">#FFB020</color>
+    <color name="brand_off_peak">#12D6A0</color>
+</resources>

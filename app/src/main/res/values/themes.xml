@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.DeepSeekWidget" parent="android:Theme.DeviceDefault.DayNight">
+        <item name="android:statusBarColor">#0B1420</item>
+        <item name="android:navigationBarColor">#0B1420</item>
+        <item name="android:windowBackground">#0B1420</item>
+    </style>
+</resources>

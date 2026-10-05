@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DeepSeek 余额插件</string>
+
+    <string name="widget_name">DeepSeek 余额与峰谷</string>
+    <string name="widget_description">桌面显示 DeepSeek 账户余额，并实时标注当前是高峰还是空闲（谷时）时段，默认每 5 秒刷新余额。</string>
+    <string name="widget_title_default">DeepSeek 余额</string>
+    <string name="widget_balance_placeholder">--</string>
+    <string name="widget_countdown_placeholder">正在计算时段…</string>
+    <string name="widget_sync_idle">待同步</string>
+
+    <string name="tier_peak_short">峰</string>
+    <string name="tier_peak_full">高峰时段</string>
+    <string name="tier_off_short">谷</string>
+    <string name="tier_off_full">空闲时段</string>
+
+    <string name="action_refresh">立即刷新余额</string>
+    <string name="action_open_app">打开设置</string>
+
+    <string name="notif_channel_name">余额常驻刷新</string>
+    <string name="notif_channel_desc">保持桌面插件每 5 秒刷新余额，需要常驻通知（Android 8.0+ 强制要求）</string>
+    <string name="notif_title">DeepSeek 余额</string>
+
+    <string name="service_description">桌面插件常驻刷新：定时查询 DeepSeek 余额并标注当前是高峰还是空闲时段</string>
+    <string name="service_special_use_reason">桌面插件需要秒级刷新账户余额与峰谷时段，由用户主动开启，全程有常驻通知可见</string>
+
+    <string name="settings_title">DeepSeek 余额插件</string>
+    <string name="settings_api_key">API Key</string>
+    <string name="settings_api_key_hint">sk-xxxxxxxxxxxxxxxxxxxxxxxx</string>
+    <string name="settings_api_key_help">在 platform.deepseek.com → API keys 创建。仅保存在本机 App 私有目录，不会上传到任何第三方。</string>
+    <string name="settings_save">保存密钥</string>
+    <string name="settings_interval">余额刷新间隔</string>
+    <string name="settings_interval_help">默认 5 秒。余额接口不计费，但频率越高越耗电。</string>
+    <string name="settings_tier_mode">时段判定</string>
+    <string name="settings_countdown">在插件上显示倒计时</string>
+    <string name="settings_tick">倒计时每秒跳动（关掉可省电）</string>
+    <string name="settings_service">常驻后台刷新（推荐开启）</string>
+    <string name="settings_service_help">关闭后仅在你手动刷新或系统定时唤醒时更新；开启后由前台服务保证 5 秒刷新。</string>
+    <string name="settings_holiday">法定节假日日历</string>
+    <string name="settings_holiday_update">更新节假日数据</string>
+    <string name="settings_holiday_help">DeepSeek 规定「中国法定节假日全天算空闲时段」。数据来自公开节假日接口，建议每年更新一次。</string>
+    <string name="settings_add_widget">添加桌面插件</string>
+    <string name="settings_add_widget_help">长按桌面空白处 → 添加小部件 / 桌面工具 → 找到「DeepSeek 余额与峰谷」拖到桌面。</string>
+    <string name="settings_miui">小米(MIUI/HyperOS)必做设置</string>
+    <string name="settings_miui_help">1) 设置 → 应用设置 → 本应用 → 省电策略 → 无限制\n2) 设置 → 应用设置 → 本应用 → 自启动 → 允许\n3) 最近任务里长按本应用卡片 → 加锁（避免被一键清理）\n4) 通知权限必须允许，否则前台服务会被系统停止</string>
+</resources>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>DeepSeek 余额插件预览</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a1017;
+    font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+    padding: 26px 24px 22px;
+    width: 660px;
+  }
+  .hint { color: #7C90A8; font-size: 13px; margin-bottom: 14px; letter-spacing: .3px; }
+  .hint b { color: #C6D6E8; font-weight: 600; }
+
+  /* 桌面插件卡片：4x2 网格 ≈ 340dp 宽，与 widget_balance.xml 1:1 对应 */
+  .widget {
+    width: 340px;
+    border-radius: 18px;
+    padding: 13px 13px 12px 15px;
+    display: flex;
+    flex-direction: column;
+  }
+  .widget.off { background: linear-gradient(315deg, #0A1A24 0%, #0d2530 100%); }
+  .widget.peak { background: linear-gradient(315deg, #1C1206 0%, #2a1a06 100%); }
+
+  .row1 { display: flex; align-items: center; }
+  .title { flex: 1; font-size: 12px; font-weight: 700; color: #8FA6C0; letter-spacing: .5px; }
+  .badge {
+    font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 100px;
+    min-width: 32px; text-align: center;
+  }
+  .off .badge { color: #12D6A0; background: rgba(18, 214, 160, .20); }
+  .peak .badge { color: #FFB020; background: rgba(255, 176, 32, .20); }
+  .sync { font-size: 11px; color: #7C90A8; margin-left: 8px; }
+
+  .balance {
+    font-family: "Consolas", "SF Mono", monospace;
+    font-size: 30px; font-weight: 700; color: #fff; margin-top: 4px;
+    letter-spacing: .5px; line-height: 1.12;
+  }
+
+  .row3 { display: flex; align-items: center; margin-top: 7px; }
+  .countdown { flex: 1; font-size: 14px; color: #C6D6E8; }
+  .countdown .num { font-family: "Consolas", monospace; font-size: 15px; letter-spacing: .5px; }
+  .day { font-size: 11px; color: #8FA6C0; margin-right: 7px; }
+  .refresh {
+    width: 30px; height: 30px; border-radius: 12px;
+    background: rgba(255,255,255,.12); display: flex;
+    align-items: center; justify-content: center;
+  }
+  .refresh svg { width: 16px; height: 16px; fill: #fff; }
+
+  .detail { font-size: 11px; color: #8FA6C0; margin-top: 5px; }
+
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+  .cap { color: #7C90A8; font-size: 12px; margin: 7px 0 0 3px; }
+  .cap b { color: #12D6A0; }
+  .cap.peakcap b { color: #FFB020; }
+</style>
+</head>
+<body>
+  <div class="hint">桌面插件「DeepSeek 余额与峰谷」· 4x2 · 当前状态与配色随峰谷自动切换</div>
+
+  <div class="stack">
+    <div>
+      <div class="widget off">
+        <div class="row1">
+          <div class="title">DeepSeek 余额</div>
+          <div class="badge">谷</div>
+          <div class="sync">刚刚</div>
+        </div>
+        <div class="balance">¥109.29</div>
+        <div class="row3">
+          <div class="countdown">距高峰 <span class="num">11:42:07</span></div>
+          <div class="day">国庆节 休</div>
+          <div class="refresh">
+            <svg viewBox="0 0 24 24"><path d="M17.65,6.35C16.2,4.9 14.21,4 12,4c-4.42,0 -7.99,3.58 -8,8s3.57,8 7.99,8c3.73,0 6.84,-2.55 7.73,-6h-2.08c-0.82,2.33 -3.04,4 -5.65,4c-3.31,0 -6,-2.69 -6,-6s2.69,-6 6,-6c1.66,0 3.14,0.69 4.22,1.78L13,11h7V4l-2.35,2.35z"/></svg>
+          </div>
+        </div>
+        <div class="detail">赠金 ¥9.29 · 充值 ¥100.00</div>
+      </div>
+      <div class="cap">空闲时段（<b>谷</b>）：青绿配色，单价为高峰的 5 折 · 倒计时指向下一个高峰</div>
+    </div>
+
+    <div>
+      <div class="widget peak">
+        <div class="row1">
+          <div class="title">DeepSeek 余额</div>
+          <div class="badge">峰</div>
+          <div class="sync">3秒前</div>
+        </div>
+        <div class="balance">¥109.29</div>
+        <div class="row3">
+          <div class="countdown">距谷时 <span class="num">00:47:12</span></div>
+          <div class="day">春节后补班</div>
+          <div class="refresh">
+            <svg viewBox="0 0 24 24"><path d="M17.65,6.35C16.2,4.9 14.21,4 12,4c-4.42,0 -7.99,3.58 -8,8s3.57,8 7.99,8c3.73,0 6.84,-2.55 7.73,-6h-2.08c-0.82,2.33 -3.04,4 -5.65,4c-3.31,0 -6,-2.69 -6,-6s2.69,-6 6,-6c1.66,0 3.14,0.69 4.22,1.78L13,11h7V4l-2.35,2.35z"/></svg>
+          </div>
+        </div>
+        <div class="detail">赠金 ¥9.29 · 充值 ¥100.00</div>
+      </div>
+      <div class="cap peakcap">高峰时段（<b>峰</b>）：琥珀配色，工作日 9:00-12:00 / 14:00-18:00</div>
+    </div>
+  </div>
+</body>
+</html>
