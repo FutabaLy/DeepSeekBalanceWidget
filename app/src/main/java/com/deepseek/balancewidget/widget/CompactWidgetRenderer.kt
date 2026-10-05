@@ -5,6 +5,7 @@ import android.os.Build
 import android.widget.RemoteViews
 import com.deepseek.balancewidget.R
 import com.deepseek.balancewidget.core.WidgetState
+import com.deepseek.balancewidget.data.CompactCoverStore
 
 /**
  * 2×2 紧凑插件的渲染（浅色主题：柔和白底 + 蓝色描边）。
@@ -35,6 +36,15 @@ object CompactWidgetRenderer {
     /** 封面层：整张图片，点一下翻到数据面。 */
     fun buildCover(context: Context, widgetId: Int): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_balance_compact_cover)
+        // 自定义封面直接把位图随 RemoteViews 传过去：
+        // 桌面进程读不到 App 私有目录，给桌面授 content:// 权限又依赖具体 launcher 包名、
+        // 重启后授权还会失效；位图在 Binder 里走 ashmem，任何桌面、重启后都能显示。
+        val custom = CompactCoverStore.loadBitmap(context)
+        if (custom != null) {
+            views.setImageViewBitmap(R.id.compact_cover_image, custom)
+        } else {
+            views.setImageViewResource(R.id.compact_cover_image, R.drawable.compact_cover)
+        }
         views.setOnClickPendingIntent(
             R.id.compact_cover_root,
             flipIntent(context, widgetId),

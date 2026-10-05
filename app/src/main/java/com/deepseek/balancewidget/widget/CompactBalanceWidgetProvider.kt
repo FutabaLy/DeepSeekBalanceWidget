@@ -136,5 +136,11 @@ class CompactBalanceWidgetProvider : AppWidgetProvider() {
                 buildFor(context, widgetId, BalanceWidgetProvider.currentState(context), tick),
             )
         }
+
+        /** 换了封面图：清掉「已推过封面」的记账，让下一次刷新把新图推上去。 */
+        fun onCoverChanged(context: Context) {
+            pushedCovers.clear()
+            updateAll(context)
+        }
     }
 }

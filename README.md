@@ -40,6 +40,8 @@
   - **4×2 大卡片**（深色）：大字余额 + 峰/谷徽章 + 距下次切换的倒计时 + 赠金/充值明细；
   - **2×2 紧凑卡片**（浅色，柔和蓝白底 + 蓝框）：**正面是封面图，点一下翻到数据面**
     （余额 + 今日已用 + 峰/谷胶囊 + 累计小时倒计时），再点一下翻回封面；只有一个刷新按钮；
+  - 封面图**可以在 App 里自己换**：选图 → 固定大小取景框里拖动/双指缩放裁剪 → 圆角可选，
+    输出 512×512 PNG（透明背景保留）；导入上限 30MB，支持 JPG/PNG/WebP/GIF/HEIC 等常见格式
   - 两者共用同一份数据与同一条刷新链路，桌面上放哪个、放几个都行
 - **今日已用**：靠相邻两次刷新的余额差值累计（余额变大视为充值，不冲抵已用），北京时间跨天自动归零
 - **默认 5 秒刷新余额**，可在 5/10/15/30/60/120/300 秒之间调整
@@ -120,7 +122,9 @@ gradle :app:assembleDebug        # 出调试包
    - 「**DeepSeek 余额与峰谷**」—— 4×2 深色大卡片，信息最全；
    - 「**DeepSeek 余额（2×2 紧凑）**」—— 2×2 柔和浅色卡片，**正面是封面图，点一下翻到数据面**；
    拖到桌面即可；
-5. 如果是从桌面添加的插件，系统会先跳到配置页，点 **完成，放到桌面**。
+5. 如果是从桌面添加的插件，系统会先跳到配置页，点 **完成，放到桌面**；
+6. 想换 2×2 的封面图：打开 App → **2×2 封面图** → **选择图片** → 在固定取景框里拖动 / 双指缩放
+   →（可选）勾上「圆角」→ **确定**，桌面上的封面立刻更新；不想用了点 **恢复内置**。
 
 > API Key 只保存在 App 私有目录的 SharedPreferences 里，插件只访问 `api.deepseek.com` 的
 > `/user/balance` 接口，不做任何上报。Android 备份已关闭（`data_extraction_rules.xml`）。
@@ -179,8 +183,10 @@ DeepSeekBalanceWidget/
 │  ├─ assets/holidays.json                # 内置法定节假日日历（2025–2026）
 │  ├─ java/com/deepseek/balancewidget/
 │  │  ├─ MainActivity.kt                  # 唯一界面（Compose）+ 插件配置页
+│  │  ├─ ui/CoverCropScreen.kt            # ★ 封面裁剪界面（固定取景框、拖动/缩放、圆角开关）
 │  │  ├─ core/
 │  │  │  ├─ PeakScheduler.kt              # ★ 峰谷判定核心：档位、下一次切换、倒计时格式化
+│  │  │  ├─ CoverCrop.kt                  # ★ 封面裁剪几何（纯函数，可单测）
 │  │  │  ├─ HolidayCalendar.kt            # 节假日日历（内置资产 + 联网更新 + 落盘）
 │  │  │  ├─ TariffTier.kt                 # 峰 / 谷 枚举与文案
 │  │  │  ├─ WidgetState.kt                # 插件要展示的全部状态
@@ -190,6 +196,8 @@ DeepSeekBalanceWidget/
 │  │  │  ├─ DeepSeekApi.kt                # /user/balance 响应解析（纯函数，可单测）
 │  │  │  ├─ DailyUsageStore.kt            # 今日已用累计（微元 Long 存取，跨天归零）
 │  │  │  ├─ CompactFaceStore.kt           # 2×2 翻面状态（封面图 ⇄ 数据面，按 widgetId 存）
+│  │  │  ├─ CompactCoverStore.kt          # 自定义封面：私有目录存 512×512 PNG + 内存缓存
+│  │  │  └─ CoverImageLoader.kt           # 选图解码（ImageDecoder/Exif 方向/降采样/30MB 上限）
 │  │  │  ├─ BalanceRepository.kt          # OkHttp 请求 + 错误映射（401/402/429/网络）
 │  │  │  ├─ AppSettings.kt                # 设置项（StateFlow）
 │  │  │  ├─ BalanceStore.kt               # 余额快照缓存（进程被杀也不掉数字）
@@ -242,6 +250,7 @@ Android 的桌面插件本身最快只能半小时刷新一次，5 秒级别必�
 - `app/src/test/.../PeakSchedulerTest.kt`：23 个用例，覆盖工作日/午间谷/周末/节假日/调休补班/跨周末切换/边界前后一致性/倒计时格式（含 2×2 的累计小时写法）；
 - `app/src/test/.../DeepSeekApiTest.kt`：9 个用例，覆盖官方示例响应、多币种、余额为零、鉴权失败、非法 JSON、Key 粗校验；
 - `app/src/test/.../DailyUsageStoreTest.kt`：6 个用例，覆盖「今日已用」的跨天归零、首次无基准、连续扣费累加、充值不冲抵、微元解析精度；
+- `app/src/test/.../CoverCropTest.kt`：5 个用例，覆盖封面裁剪的最小缩放、位移钳制、取景框区域、以及任意缩放下取景框都落在图片内；
 - `docs/verify_peak_logic.py`：用 Python 独立复刻同一套算法，对 2026 全年 **525,600 个时刻逐分钟扫描**，
   校验「切换时刻只落在 09:00/12:00/14:00/18:00」「切换前后档位必然相反」「倒计时恒为正且不超过 10 天」。
   运行：`python docs/verify_peak_logic.py`

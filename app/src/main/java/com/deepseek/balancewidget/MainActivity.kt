@@ -5,15 +5,20 @@ import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,7 +64,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -71,11 +80,15 @@ import com.deepseek.balancewidget.core.HolidayCalendar
 import com.deepseek.balancewidget.core.PeakScheduler
 import com.deepseek.balancewidget.core.WidgetStateBus
 import com.deepseek.balancewidget.data.AppSettings
+import com.deepseek.balancewidget.data.CompactCoverStore
+import com.deepseek.balancewidget.data.CoverImageLoader
 import com.deepseek.balancewidget.data.HolidayUpdater
 import com.deepseek.balancewidget.service.BalanceService
 import com.deepseek.balancewidget.service.Notifier
 import com.deepseek.balancewidget.service.ServiceController
+import com.deepseek.balancewidget.ui.CoverCropScreen
 import com.deepseek.balancewidget.widget.BalanceWidgetProvider
+import com.deepseek.balancewidget.widget.CompactBalanceWidgetProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -195,6 +208,28 @@ private fun SettingsScreen(
     var keyVisible by remember { mutableStateOf(false) }
     var busyHoliday by remember { mutableStateOf(false) }
     var busyRefresh by remember { mutableStateOf(false) }
+
+    // ---- 2×2 封面图：选图 → 裁剪 → 应用到插件
+    var coverVersion by remember { mutableStateOf(CompactCoverStore.version(context)) }
+    val hasCustomCover = remember(coverVersion) { CompactCoverStore.hasCustom(context) }
+    var cropSource by remember { mutableStateOf<Bitmap?>(null) }
+    var busyCover by remember { mutableStateOf(false) }
+    val pickCover = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        if (uri != null) {
+            busyCover = true
+            scope.launch {
+                val decoded = withContext(Dispatchers.IO) { CoverImageLoader.decode(context, uri) }
+                busyCover = false
+                if (decoded == null) {
+                    onToast("这张图读不出来：可能格式不支持，或者超过 30MB")
+                } else {
+                    cropSource = decoded
+                }
+            }
+        }
+    }
 
     // 界面每秒走一次倒计时，保证看到的就是插件上的数字
     var now by remember { mutableStateOf(DateUtil.nowBeijing()) }
@@ -401,6 +436,64 @@ private fun SettingsScreen(
                     )
                 }
 
+                // ---- 2×2 封面图
+                SectionCard {
+                    Text("2×2 封面图", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = "2×2 插件正面那张图（点一下会翻到余额面）。可以换成自己的图片：" +
+                            "导入后拖动 / 双指缩放裁剪，取景框固定大小，框内所见即所得。",
+                        color = TextDim,
+                        fontSize = 11.sp,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CoverThumbnail(hasCustom = hasCustomCover, version = coverVersion)
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (hasCustomCover) "当前：自定义图片" else "当前：内置图片",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                            )
+                            Text(
+                                text = "${CoverImageLoader.describeLimit()}；" +
+                                    "输出 ${CompactCoverStore.OUTPUT_SIZE}×" +
+                                    "${CompactCoverStore.OUTPUT_SIZE} PNG",
+                                color = TextDim,
+                                fontSize = 11.sp,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                pickCover.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly,
+                                    ),
+                                )
+                            },
+                            enabled = !busyCover,
+                            colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
+                        ) {
+                            Text(if (busyCover) "读取中…" else "选择图片")
+                        }
+                        if (hasCustomCover) {
+                            OutlinedButton(
+                                onClick = {
+                                    CompactCoverStore.clear(context)
+                                    coverVersion = CompactCoverStore.version(context)
+                                    CompactBalanceWidgetProvider.onCoverChanged(context)
+                                    onToast("已恢复内置封面")
+                                },
+                            ) {
+                                Text("恢复内置")
+                            }
+                        }
+                    }
+                }
+
                 // ---- 时段判定
                 SectionCard {
                     Text("时段判定", color = Color.White, fontWeight = FontWeight.SemiBold)
@@ -568,6 +661,30 @@ private fun SettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
             }
+
+            // 选好图后盖一层裁剪界面（取景框固定大小）
+            cropSource?.let { source ->
+                CoverCropScreen(
+                    source = source,
+                    onCancel = { cropSource = null },
+                    onConfirm = { cropped ->
+                        cropSource = null
+                        scope.launch {
+                            val saved = withContext(Dispatchers.IO) {
+                                CompactCoverStore.save(context, cropped)
+                            }
+                            cropped.recycle()
+                            if (saved) {
+                                coverVersion = CompactCoverStore.version(context)
+                                CompactBalanceWidgetProvider.onCoverChanged(context)
+                                onToast("封面已更新，回桌面看看")
+                            } else {
+                                onToast("封面保存失败")
+                            }
+                        }
+                    },
+                )
+            }
         }
     }
 }
@@ -635,4 +752,39 @@ private fun BulletText(text: String) {
         fontSize = 12.sp,
         modifier = Modifier.padding(vertical = 1.dp),
     )
+}
+
+/** 封面缩略图：自定义图优先，没有就用内置图。 */
+@Composable
+private fun CoverThumbnail(hasCustom: Boolean, version: Int) {
+    val context = LocalContext.current
+    var bitmap by remember(hasCustom, version) { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(hasCustom, version) {
+        bitmap = withContext(Dispatchers.IO) {
+            if (hasCustom) CompactCoverStore.loadBitmap(context) else null
+        }
+    }
+    Box(
+        modifier = Modifier
+            .size(64.dp)
+            .background(CardBorder, RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        val image = bitmap
+        if (image != null) {
+            Image(
+                bitmap = image.asImageBitmap(),
+                contentDescription = "当前封面",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            Image(
+                painter = painterResource(R.drawable.compact_cover),
+                contentDescription = "内置封面",
+                modifier = Modifier.fillMaxSize().padding(4.dp),
+                contentScale = ContentScale.Fit,
+            )
+        }
+    }
 }
