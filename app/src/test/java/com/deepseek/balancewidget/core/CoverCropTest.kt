@@ -46,18 +46,22 @@ class CoverCropTest {
 
     @Test
     fun `任何缩放与位移下取景框都在图片内部`() {
+        val viewport = 300f
         val images = listOf(
-            Triple(1000, 500, 0.6f),
-            Triple(500, 1000, 0.6f),
-            Triple(2048, 1536, 300f / 2048f),
-            Triple(300, 300, 1f),
-            Triple(4000, 3000, 300f / 4000f),
+            1000 to 500,
+            500 to 1000,
+            2048 to 1536,
+            300 to 300,
+            4000 to 3000,
+            1 to 1,
         )
-        for ((w, h, minScale) in images) {
+        for ((w, h) in images) {
+            // 下限必须用真正的「铺满」缩放：低于它图片就盖不住取景框，本来就会有透明边
+            val minScale = CoverCrop.minScale(w, h, viewport)
             for (scale in listOf(minScale, minScale * 2f, minScale * 8f)) {
                 for (offset in listOf(-99999f, -37f, 0f, 37f, 99999f)) {
-                    val (cx, cy) = CoverCrop.clampOffset(w, h, 300f, scale, offset, offset)
-                    val rect = CoverCrop.sourceRect(w, h, 300f, scale, cx, cy)
+                    val (cx, cy) = CoverCrop.clampOffset(w, h, viewport, scale, offset, offset)
+                    val rect = CoverCrop.sourceRect(w, h, viewport, scale, cx, cy)
                     assertTrue("left=${rect.left} ($w x $h @$scale)", rect.left >= -0.01f)
                     assertTrue("top=${rect.top} ($w x $h @$scale)", rect.top >= -0.01f)
                     assertTrue(
@@ -71,6 +75,16 @@ class CoverCropTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun `低于铺满缩放时会露出图片外的区域`() {
+        // 这解释了为什么 App 里必须用 minScale 当下限：2048x1536 在 300 视口里，
+        // 真正的铺满比例是 300/1536 ≈ 0.195，而不是 300/2048
+        assertEquals(300f / 1536f, CoverCrop.minScale(2048, 1536, 300f), 0.0001f)
+        val tooSmall = 300f / 2048f
+        val rect = CoverCrop.sourceRect(2048, 1536, 300f, tooSmall, 0f, 0f)
+        assertTrue("这个比例下高度盖不满，取景框会超出图片", rect.size > 1536f)
     }
 
     @Test
