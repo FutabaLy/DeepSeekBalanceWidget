@@ -9,20 +9,27 @@
 
 ---
 
-## 1. 先说清楚：这个仓库里有什么、没有什么
+## 1. 先说清楚：这个仓库里有什么
 
 | | 状态 |
 |---|---|
 | 完整可编译的 Android 工程源码 | ✅ 已包含 |
 | 峰谷判定逻辑的单元测试（JUnit）| ✅ 已包含 |
 | 一键出 APK 的 GitHub Actions 工作流 | ✅ 已包含 |
-| **编译好的 APK** | ❌ 没有 |
+| **编译好的 APK** | ✅ 见 [Releases](https://github.com/FutabaLy/DeepSeekBalanceWidget/releases/latest) |
 
-**为什么没有 APK**：生成 APK 需要 JDK + Android SDK + Gradle，本机没有安装任何一项
-（`java`、`gradle`、`ANDROID_HOME` 全部为空，C 盘可用空间也不足以下载 SDK）。
-所以 APK 需要你用下面两种方式之一自己出，**任选一种即可，都不需要在这台机器上装环境**：
+**最省事：直接下载已编译好的 APK。**
 
-- **方式 A（最省事）**：把这套代码推到 GitHub，Actions 自动编译并给出 APK 下载链接；
+打开 [Releases](https://github.com/FutabaLy/DeepSeekBalanceWidget/releases/latest)，下载：
+
+- `app-debug.apk` —— 调试版，**推荐先用这个**，可直接安装；
+- `app-release.apk` —— 用 debug 签名打的 release 包，体积更小，同样可直接安装。
+
+传到手机安装即可，本机不需要装 JDK / Android SDK / Gradle。
+
+想改代码后自己出包，也有两条路：
+
+- **方式 A（无需本地环境）**：推送到 GitHub，Actions 自动编译并把 APK 挂到 Artifacts / Release；
 - **方式 B（最直接）**：用 Android Studio 打开本目录，点一下 Run/Build。
 
 ---
@@ -42,18 +49,22 @@
 
 ---
 
-## 3. 出 APK 的两种方式
+## 3. 自己出 APK 的两种方式
 
 ### 方式 A：GitHub Actions 云端编译（无需本地环境）
 
+仓库已经建好，改完代码直接推：
+
 ```bash
-cd DeepSeekBalanceWidget
-git init
 git add .
-git commit -m "DeepSeek 余额桌面插件"
-git branch -M main
-git remote add origin https://github.com/<你的用户名>/<仓库名>.git
-git push -u origin main
+git commit -m "改了什么"
+git push
+```
+
+想发一个新版本就打个 tag：
+
+```bash
+git tag v1.1.0 && git push origin v1.1.0
 ```
 
 推送后：
@@ -65,11 +76,7 @@ git push -u origin main
    - `app-debug.apk` —— 调试版，**推荐先用这个**，可直接安装；
    - `app-release.apk` —— 用 debug 签名打的 release 包，体积更小，同样可直接安装。
 
-也可以打 tag 自动发 Release：
-
-```bash
-git tag v1.0.0 && git push origin v1.0.0
-```
+打 tag 推送时会顺带自动建 Release（就是上面 [Releases](https://github.com/FutabaLy/DeepSeekBalanceWidget/releases/latest) 里那些包）。
 
 工作流会顺带跑单元测试，测试挂了就不会出包（这一步能帮你挡住峰谷判定被改错的情况）。
 
