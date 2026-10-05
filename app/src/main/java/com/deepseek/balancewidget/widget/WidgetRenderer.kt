@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.os.Build
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
@@ -50,14 +51,12 @@ object WidgetRenderer {
         val bgColor = if (state.tier.isPeak) COLOR_BG_PEAK else COLOR_BG_OFF_PEAK
 
         // 卡片背景与徽章
-        // 注意：这里用 setBackgroundTintList 而不是 setBackgroundColor —— 后者会丢掉
-        // bg_badge / bg_button 的圆角形状；tint 才能在保留胶囊圆角的同时换色。
+        // 注意：这里优先用 setBackgroundTintList 而不是 setBackgroundColor —— 后者会丢掉
+        // bg_badge 的圆角形状；tint 才能在保留胶囊圆角的同时换色。
+        // 但 RemoteViews.setColorStateList 是 API 31 才有的方法，低版本宿主（桌面）执行这条
+        // action 时会抛 ActionException 让插件显示「加载失败」，所以老系统退回纯色背景。
         views.setInt(R.id.widget_root, "setBackgroundColor", bgColor)
-        views.setColorStateList(
-            R.id.tv_tier,
-            "setBackgroundTintList",
-            ColorStateList.valueOf(withAlpha(accent, 0x38)),
-        )
+        setBackgroundTint(views, R.id.tv_tier, withAlpha(accent, 0x38))
         views.setTextColor(R.id.tv_tier, accent)
         views.setTextViewText(
             R.id.tv_tier,
@@ -102,11 +101,10 @@ object WidgetRenderer {
         views.setViewVisibility(R.id.tv_detail, if (detail == null) View.GONE else View.VISIBLE)
 
         // 刷新按钮：请求中变半透明，给出即时反馈（背景保持圆角形状，仅调透明度）
+        // setFloat 同样是高版本才有的 RemoteViews 方法，低版本直接跳过这层视觉反馈。
         views.setImageViewResource(R.id.btn_refresh, R.drawable.ic_refresh)
-        if (state.loading) {
-            views.setFloat(R.id.btn_refresh, "setAlpha", 0.35f)
-        } else {
-            views.setFloat(R.id.btn_refresh, "setAlpha", 1.0f)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            views.setFloat(R.id.btn_refresh, "setAlpha", if (state.loading) 0.35f else 1.0f)
         }
 
         // 点击事件：点刷新按钮 → 立即刷新；点卡片其它区域 → 打开设置页
@@ -133,6 +131,15 @@ object WidgetRenderer {
 
     private fun withAlpha(color: Int, alpha: Int): Int =
         Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
+
+    /** 徽章底色：API 31+ 用 tint 保住胶囊圆角，低版本退回纯色（丢圆角但不会让插件加载失败）。 */
+    private fun setBackgroundTint(views: RemoteViews, viewId: Int, color: Int) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            views.setColorStateList(viewId, "setBackgroundTintList", ColorStateList.valueOf(color))
+        } else {
+            views.setInt(viewId, "setBackgroundColor", color)
+        }
+    }
 
     fun dp(context: Context, value: Float): Int = TypedValue.applyDimension(
         TypedValue.COMPLEX_UNIT_DIP,

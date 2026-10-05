@@ -24,6 +24,9 @@ class PeakSchedulerTest {
                 """
                 {
                   "2026-10-01": { "h": true,  "n": "国庆节" },
+                  "2026-10-02": { "h": true,  "n": "国庆节" },
+                  "2026-10-03": { "h": true,  "n": "国庆节" },
+                  "2026-10-04": { "h": true,  "n": "国庆节" },
                   "2026-10-05": { "h": true,  "n": "国庆节" },
                   "2026-10-06": { "h": true,  "n": "国庆节" },
                   "2026-10-07": { "h": true,  "n": "国庆节" },
@@ -150,9 +153,18 @@ class PeakSchedulerTest {
 
     @Test
     fun `节假日期间的下一次切换跳过整个假期`() {
-        // 2026-10-01 ~ 10-07 放假，10-10 周六补班，10-12 周一才是下一个工作日
+        // 2026-10-01 ~ 10-07 放假，假期后第一个工作日是 10-08（周四）
         val (boundary, next) = PeakScheduler.nextTransition(at("2026-10-05", "10:00"))
-        assertEquals(at("2026-10-12", "09:00"), boundary)
+        assertEquals(at("2026-10-08", "09:00"), boundary)
+        assertEquals(TariffTier.PEAK, next)
+    }
+
+    @Test
+    fun `假期结束后恢复峰谷且周六补班照常算工作日`() {
+        // 10-08 周四、10-09 周五恢复正常峰谷；10-10 周六补班同样是工作日
+        assertEquals(TariffTier.PEAK, PeakScheduler.tierAt(at("2026-10-08", "10:00")))
+        val (boundary, next) = PeakScheduler.nextTransition(at("2026-10-09", "18:30"))
+        assertEquals(at("2026-10-10", "09:00"), boundary)
         assertEquals(TariffTier.PEAK, next)
     }
 

@@ -208,8 +208,8 @@ Android 的桌面插件本身最快只能半小时刷新一次，5 秒级别必�
 
 ### 已做的正确性验证
 
-- `app/src/test/.../PeakSchedulerTest.kt`：19 个用例，覆盖工作日/午间谷/周末/节假日/调休补班/跨周末切换/边界前后一致性/倒计时格式；
-- `app/src/test/.../DeepSeekApiTest.kt`：10 个用例，覆盖官方示例响应、多币种、余额为零、鉴权失败、非法 JSON、Key 粗校验；
+- `app/src/test/.../PeakSchedulerTest.kt`：22 个用例，覆盖工作日/午间谷/周末/节假日/调休补班/跨周末切换/边界前后一致性/倒计时格式；
+- `app/src/test/.../DeepSeekApiTest.kt`：9 个用例，覆盖官方示例响应、多币种、余额为零、鉴权失败、非法 JSON、Key 粗校验；
 - `docs/verify_peak_logic.py`：用 Python 独立复刻同一套算法，对 2026 全年 **525,600 个时刻逐分钟扫描**，
   校验「切换时刻只落在 09:00/12:00/14:00/18:00」「切换前后档位必然相反」「倒计时恒为正且不超过 10 天」。
   运行：`python docs/verify_peak_logic.py`
