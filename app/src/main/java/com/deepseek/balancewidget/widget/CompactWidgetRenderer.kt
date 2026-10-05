@@ -75,8 +75,8 @@ object CompactWidgetRenderer {
         views.setTextColor(R.id.compact_title, COLOR_BRAND)
 
         val error = state.lastError
-        // 余额大字：左深蓝 → 右天蓝的渐变。RemoteViews 给 TextView 只能上纯色，
-        // 所以这里画成位图再 setImageViewBitmap（出错时退化成纯红，一眼能看出不对）
+        // 余额大字：左深蓝 → 右天蓝的循环渐变动画。RemoteViews 给 TextView 只能上纯色，
+        // 所以这里画成位图再 setImageViewBitmap；相位每秒推一格，跟着刷新节奏流动
         val balanceBitmap = GradientTextRenderer.render(
             text = state.balanceText,
             textSizeSp = GradientTextRenderer.BALANCE_TEXT_SP,
@@ -84,6 +84,7 @@ object CompactWidgetRenderer {
             startColor = if (error != null) COLOR_ERROR else GradientTextRenderer.BALANCE_GRADIENT_START,
             endColor = if (error != null) COLOR_ERROR else GradientTextRenderer.BALANCE_GRADIENT_END,
             typeface = GradientTextRenderer.balanceTypeface(context),
+            phase = if (error != null) 0 else GradientTextRenderer.currentPhase(),
         )
         if (balanceBitmap != null) {
             views.setImageViewBitmap(R.id.compact_balance, balanceBitmap)

@@ -316,7 +316,11 @@ class BalanceService : Service() {
             append(state.balanceText).append('|')
             append(state.usedTodayText).append('|')
             append(state.tier).append('|')
+            // 两种倒计时写法都要算进来：4×2 用「2天08小时53分」（天级时不含秒），
+            // 2×2 用「56:53:12」。只算前者的话，倒计时超过一天时指纹一分钟才变一次，
+            // 2×2 的秒数就不跳了、余额的渐变动画也会卡住。
             append(state.countdownText(showSeconds)).append('|')
+            append(state.countdownTextCompact(showSeconds)).append('|')
             append(state.countdownLabel).append('|')
             append(state.dayBadge()).append('|')
             append(state.lastError).append('|')

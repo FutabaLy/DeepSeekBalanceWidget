@@ -24,8 +24,8 @@ import kotlin.math.ceil
  */
 object GradientTextRenderer {
 
-    /** 缓存最近几张（余额变化不频繁，避免每秒重新分配与绘制）。 */
-    private val cache = LruCache<String, Bitmap>(6)
+    /** 缓存最近若干张（动画有 12 个相位，够放）。 */
+    private val cache = LruCache<String, Bitmap>(16)
 
     /** 余额大字的字号（sp）。 */
     const val BALANCE_TEXT_SP = 30f
@@ -33,6 +33,9 @@ object GradientTextRenderer {
     /** 渐变起止色：左深蓝 → 右天蓝。 */
     const val BALANCE_GRADIENT_START = 0xFF1B3A8C.toInt()
     const val BALANCE_GRADIENT_END = 0xFF5AA8FF.toInt()
+
+    /** 动画一共几格（每格 1 秒，正好跟着服务的刷新节奏走，不额外耗电）。 */
+    const val ANIMATION_STEPS = 12
 
     @Volatile
     private var cachedTypeface: Typeface? = null
@@ -50,11 +53,20 @@ object GradientTextRenderer {
     }
 
     /**
+     * 当前动画相位（0 到 [ANIMATION_STEPS] - 1）。
+     *
+     * 插件没法做逐帧动画（RemoteViews 不支持），只能靠「每秒重推一张相位不同的位图」来实现；
+     * 好在插件本来每秒就在刷新倒计时，等于白捡。息屏或服务停掉时会停在当前相位。
+     */
+    fun currentPhase(): Int = ((System.currentTimeMillis() / 1000) % ANIMATION_STEPS).toInt()
+
+    /**
      * 画一段渐变文字。
      *
      * @param textSizeSp 字号（sp）；位图会按 [density] 换算成像素
      * @param startColor 左侧颜色（也是回退用的纯色）
      * @param endColor 右侧颜色
+     * @param phase 动画相位；不同相位画出来的是同一套渐变平移后的结果，循环无接缝
      */
     fun render(
         text: String,
@@ -63,9 +75,11 @@ object GradientTextRenderer {
         startColor: Int,
         endColor: Int,
         typeface: Typeface,
+        phase: Int = 0,
     ): Bitmap? {
         if (text.isEmpty()) return null
-        val key = "$text|$textSizeSp|$startColor|$endColor|${typeface.hashCode()}|$density"
+        val step = ((phase % ANIMATION_STEPS) + ANIMATION_STEPS) % ANIMATION_STEPS
+        val key = "$text|$textSizeSp|$startColor|$endColor|${typeface.hashCode()}|$density|$step"
         cache.get(key)?.let { if (!it.isRecycled) return it }
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -81,14 +95,19 @@ object GradientTextRenderer {
         val height = ceil(metrics.descent - metrics.ascent).toInt().coerceAtLeast(1)
         // 左右各留 1px，避免抗锯齿边缘被裁掉
         val bitmap = Bitmap.createBitmap(width + 2, height, Bitmap.Config.ARGB_8888)
+
+        // 一个周期正好覆盖整段文字：左深蓝 → 中天蓝 → 右深蓝，首尾同色所以平移循环无接缝；
+        // 相位每加一格就把渐变整体左移 1/N 个周期，看起来就是颜色在字上流动。
+        val period = width.toFloat()
+        val shift = -period * step / ANIMATION_STEPS
         paint.shader = LinearGradient(
+            shift,
             0f,
+            shift + period,
             0f,
-            width.toFloat(),
-            0f,
-            startColor,
-            endColor,
-            Shader.TileMode.MIRROR,
+            intArrayOf(startColor, endColor, startColor),
+            floatArrayOf(0f, 0.5f, 1f),
+            Shader.TileMode.REPEAT,
         )
         Canvas(bitmap).drawText(text, 1f, -metrics.ascent, paint)
 
