@@ -40,6 +40,8 @@
   - **4×2 大卡片**（深色）：大字余额 + 峰/谷徽章 + 距下次切换的倒计时 + 赠金/充值明细；
   - **2×2 紧凑卡片**（浅色，柔和蓝白底 + 蓝框）：**正面是封面图，点一下翻到数据面**
     （余额 + 今日已用 + 峰/谷胶囊 + 累计小时倒计时），再点一下翻回封面；只有一个刷新按钮；
+  - 余额大字是**左深蓝 → 右天蓝的渐变字**：RemoteViews 给 TextView 只能上纯色，
+    所以这张字是 App 里用 `LinearGradient` 画成位图再传过去的（见 `GradientTextRenderer`）；
   - 封面图**可以在 App 里自己换**：选图 → 固定大小取景框里拖动/双指缩放裁剪 → 圆角可选，
     输出 512×512 PNG（透明背景保留）；导入上限 30MB，支持 JPG/PNG/WebP/GIF/HEIC 等常见格式
   - 两者共用同一份数据与同一条刷新链路，桌面上放哪个、放几个都行
@@ -211,6 +213,7 @@ DeepSeekBalanceWidget/
 │  │  │  ├─ CompactBalanceWidgetProvider.kt # 2×2 插件 provider（浅色版）
 │  │  │  ├─ WidgetRenderer.kt             # ★ 4×2 RemoteViews 渲染与动态配色
 │  │  │  ├─ CompactWidgetRenderer.kt      # ★ 2×2 RemoteViews 渲染（白底蓝框）
+│  │  │  ├─ GradientTextRenderer.kt       # ★ 渐变文字画成位图（余额大字用）
 │  │  │  ├─ WidgetIntents.kt              # 点击事件 PendingIntent 工厂（两种插件共用）
 │  │  │  ├─ WidgetActionReceiver.kt       # ↻ 刷新 / 峰谷徽章切换
 │  │  │  └─ BootReceiver.kt               # 开机恢复

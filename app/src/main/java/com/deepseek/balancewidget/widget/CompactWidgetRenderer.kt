@@ -75,11 +75,20 @@ object CompactWidgetRenderer {
         views.setTextColor(R.id.compact_title, COLOR_BRAND)
 
         val error = state.lastError
-        views.setTextViewText(R.id.compact_balance, state.balanceText)
-        views.setTextColor(
-            R.id.compact_balance,
-            if (error != null) COLOR_ERROR else COLOR_BRAND,
+        // 余额大字：左深蓝 → 右天蓝的渐变。RemoteViews 给 TextView 只能上纯色，
+        // 所以这里画成位图再 setImageViewBitmap（出错时退化成纯红，一眼能看出不对）
+        val balanceBitmap = GradientTextRenderer.render(
+            text = state.balanceText,
+            textSizeSp = GradientTextRenderer.BALANCE_TEXT_SP,
+            density = context.resources.displayMetrics.density,
+            startColor = if (error != null) COLOR_ERROR else GradientTextRenderer.BALANCE_GRADIENT_START,
+            endColor = if (error != null) COLOR_ERROR else GradientTextRenderer.BALANCE_GRADIENT_END,
+            typeface = GradientTextRenderer.balanceTypeface,
         )
+        if (balanceBitmap != null) {
+            views.setImageViewBitmap(R.id.compact_balance, balanceBitmap)
+            views.setContentDescription(R.id.compact_balance, state.balanceText)
+        }
 
         // 第三行：正常显示「今日已用 ¥x.xx」，出错时整行显示原因（紧凑版没有别的位置放提示）
         if (error != null) {

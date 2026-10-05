@@ -56,21 +56,14 @@
             android:src="@drawable/ic_refresh_blue" />
     </LinearLayout>
 
-    <!-- 第二行：余额大字 -->
-    <TextView
+    <!-- 第二行：余额大字。渐变字没法用 RemoteViews 上色，改由 GradientTextRenderer 画成位图 -->
+    <ImageView
         android:id="@+id/compact_balance"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:ellipsize="end"
-        android:fontFamily="sans-serif-black"
-        android:includeFontPadding="false"
-        android:letterSpacing="0.02"
-        android:maxLines="1"
-        android:text="@string/widget_balance_placeholder"
-        android:textColor="#3A55A8"
-        android:textSize="26sp"
-        android:textStyle="bold" />
+        android:contentDescription="@string/widget_balance_placeholder"
+        android:scaleType="centerInside" />
 
     <!-- 第三行：今日已用（出错时显示错误信息） -->
     <TextView
