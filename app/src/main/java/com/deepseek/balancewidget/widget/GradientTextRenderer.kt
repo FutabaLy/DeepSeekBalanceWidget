@@ -1,5 +1,6 @@
 package com.deepseek.balancewidget.widget
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.LinearGradient
@@ -7,6 +8,8 @@ import android.graphics.Paint
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.util.LruCache
+import androidx.core.content.res.ResourcesCompat
+import com.deepseek.balancewidget.R
 import kotlin.math.ceil
 
 /**
@@ -24,16 +27,26 @@ object GradientTextRenderer {
     /** 缓存最近几张（余额变化不频繁，避免每秒重新分配与绘制）。 */
     private val cache = LruCache<String, Bitmap>(6)
 
-    /** 余额大字的字号（sp），和原来 TextView 的 26sp 对齐。 */
-    const val BALANCE_TEXT_SP = 26f
+    /** 余额大字的字号（sp）。 */
+    const val BALANCE_TEXT_SP = 30f
 
     /** 渐变起止色：左深蓝 → 右天蓝。 */
     const val BALANCE_GRADIENT_START = 0xFF1B3A8C.toInt()
     const val BALANCE_GRADIENT_END = 0xFF5AA8FF.toInt()
 
-    /** 余额用的字重：系统里最粗的那一档（MIUI 上就是 MiSans Black）。 */
-    val balanceTypeface: Typeface by lazy {
-        Typeface.create("sans-serif-black", Typeface.BOLD)
+    @Volatile
+    private var cachedTypeface: Typeface? = null
+
+    /**
+     * 余额用的字重：打包进 APK 的 Nunito Black（拉丁与数字），
+     * 中文不在这个字体里，会自动回落到系统字体。加载失败就退回系统最粗字重。
+     */
+    fun balanceTypeface(context: Context): Typeface {
+        cachedTypeface?.let { return it }
+        val typeface = ResourcesCompat.getFont(context, R.font.nunito_black)
+            ?: Typeface.create("sans-serif-black", Typeface.BOLD)
+        cachedTypeface = typeface
+        return typeface
     }
 
     /**

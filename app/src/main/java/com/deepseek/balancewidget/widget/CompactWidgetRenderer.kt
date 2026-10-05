@@ -83,7 +83,7 @@ object CompactWidgetRenderer {
             density = context.resources.displayMetrics.density,
             startColor = if (error != null) COLOR_ERROR else GradientTextRenderer.BALANCE_GRADIENT_START,
             endColor = if (error != null) COLOR_ERROR else GradientTextRenderer.BALANCE_GRADIENT_END,
-            typeface = GradientTextRenderer.balanceTypeface,
+            typeface = GradientTextRenderer.balanceTypeface(context),
         )
         if (balanceBitmap != null) {
             views.setImageViewBitmap(R.id.compact_balance, balanceBitmap)

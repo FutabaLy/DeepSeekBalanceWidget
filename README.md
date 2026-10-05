@@ -42,6 +42,8 @@
     （余额 + 今日已用 + 峰/谷胶囊 + 累计小时倒计时），再点一下翻回封面；只有一个刷新按钮；
   - 余额大字是**左深蓝 → 右天蓝的渐变字**：RemoteViews 给 TextView 只能上纯色，
     所以这张字是 App 里用 `LinearGradient` 画成位图再传过去的（见 `GradientTextRenderer`）；
+  - 2×2 的文字统一用打包进 APK 的 **Nunito Black**（`res/font/nunito_black.ttf`，OFL 许可，
+    只含拉丁/数字，中文自动回落系统字体）；余额字号 30sp；
   - 封面图**可以在 App 里自己换**：选图 → 固定大小取景框里拖动/双指缩放裁剪 → 圆角可选，
     输出 512×512 PNG（透明背景保留）；导入上限 30MB，支持 JPG/PNG/WebP/GIF/HEIC 等常见格式
   - 两者共用同一份数据与同一条刷新链路，桌面上放哪个、放几个都行
@@ -224,6 +226,8 @@ DeepSeekBalanceWidget/
 │  ├─ res/layout/widget_balance_compact.xml # ★ 2×2 插件布局
 │  ├─ res/layout/widget_balance_compact_cover.xml # ★ 2×2 封面层布局（整张图）
 │  ├─ res/drawable-nodpi/compact_cover.webp # 2×2 封面图（透明底抠图，见 docs/make_cover.py）
+│  ├─ res/font/nunito_black.ttf           # 打包的 Nunito Black（见 docs/make_font.py）
+│  ├─ assets/licenses/OFL-Nunito.txt      # 上面那款字体的 OFL 许可
 │  ├─ res/xml/widget_balance_info.xml     # 4×2 插件元数据（可缩放、配置页）
 │  └─ res/xml/widget_balance_compact_info.xml # 2×2 插件元数据（targetCell 2×2）
 ├─ app/src/test/...                       # 单元测试：峰谷判定 + 余额解析
@@ -231,6 +235,8 @@ DeepSeekBalanceWidget/
    ├─ widget-preview.png                  # 预览图
    ├─ make_preview.py                     # 预览图生成脚本
    ├─ make_cover.py                       # 2×2 封面图生成脚本（保留透明底 + 防黑边 + WebP 压缩）
+   ├─ make_font.py                        # 把可变的 Nunito 固定成 Black 并子集化成 34KB
+   ├─ font_candidates.py                  # 字体候选对比图（挑字用）
    └─ verify_peak_logic.py                # 峰谷逻辑独立验证（全年逐分钟扫描）
 ```
 
