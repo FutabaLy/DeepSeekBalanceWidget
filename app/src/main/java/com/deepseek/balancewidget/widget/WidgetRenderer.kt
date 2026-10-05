@@ -1,14 +1,11 @@
 package com.deepseek.balancewidget.widget
 
-import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.os.Build
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
-import com.deepseek.balancewidget.MainActivity
 import com.deepseek.balancewidget.R
 import com.deepseek.balancewidget.core.WidgetState
 
@@ -119,9 +116,15 @@ object WidgetRenderer {
         }
 
         // 点击事件：点刷新按钮 → 立即刷新；点卡片其它区域 → 打开设置页
-        views.setOnClickPendingIntent(R.id.btn_refresh, broadcast(context, ACTION_REFRESH, 1))
-        views.setOnClickPendingIntent(R.id.widget_root, openApp(context, 2))
-        views.setOnClickPendingIntent(R.id.tv_tier, broadcast(context, ACTION_TOGGLE_TIER, 3))
+        views.setOnClickPendingIntent(
+            R.id.btn_refresh,
+            WidgetIntents.broadcast(context, ACTION_REFRESH, 1),
+        )
+        views.setOnClickPendingIntent(R.id.widget_root, WidgetIntents.openApp(context, 2))
+        views.setOnClickPendingIntent(
+            R.id.tv_tier,
+            WidgetIntents.broadcast(context, ACTION_TOGGLE_TIER, 3),
+        )
 
         return views
     }
@@ -145,30 +148,6 @@ object WidgetRenderer {
         value,
         context.resources.displayMetrics,
     ).toInt()
-
-    private fun broadcast(context: Context, action: String, requestCode: Int): PendingIntent {
-        val intent = Intent(context, WidgetActionReceiver::class.java).apply {
-            this.action = action
-        }
-        return PendingIntent.getBroadcast(
-            context,
-            requestCode,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-    }
-
-    private fun openApp(context: Context, requestCode: Int): PendingIntent {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        return PendingIntent.getActivity(
-            context,
-            requestCode,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-    }
 
     /** 判断某个 provider 当前是否还有存活的插件实例。 */
     fun hasWidgetInstances(context: Context): Boolean {

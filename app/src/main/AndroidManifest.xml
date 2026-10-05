@@ -41,7 +41,7 @@
             </intent-filter>
         </activity>
 
-        <!-- 桌面插件：configure 指向设置页，添加时先让用户填 Key -->
+        <!-- 桌面插件 1：4×2 大卡片（深色主题），configure 指向设置页，添加时先让用户填 Key -->
         <receiver
             android:name=".widget.BalanceWidgetProvider"
             android:exported="false"
@@ -52,6 +52,19 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_balance_info" />
+        </receiver>
+
+        <!-- 桌面插件 2：2×2 紧凑卡片（浅色主题），与 4×2 共用同一份数据与刷新链路 -->
+        <receiver
+            android:name=".widget.CompactBalanceWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_compact_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_balance_compact_info" />
         </receiver>
 
         <!-- 插件按钮 / 通知按钮 -->

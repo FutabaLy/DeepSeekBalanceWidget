@@ -36,7 +36,11 @@
 
 ## 2. 功能清单
 
-- **桌面插件（4x2，可缩放）**：大字余额 + 峰/谷徽章 + 距下次切换的倒计时 + 赠金/充值明细
+- **两种尺寸的桌面插件**：
+  - **4×2 大卡片**（深色）：大字余额 + 峰/谷徽章 + 距下次切换的倒计时 + 赠金/充值明细；
+  - **2×2 紧凑卡片**（浅色，白底蓝框）：余额 + **今日已用** + 峰/谷胶囊 + 倒计时，一个刷新按钮；
+  - 两者共用同一份数据与同一条刷新链路，桌面上放哪个、放几个都行
+- **今日已用**：靠相邻两次刷新的余额差值累计（余额变大视为充值，不冲抵已用），北京时间跨天自动归零
 - **默认 5 秒刷新余额**，可在 5/10/15/30/60/120/300 秒之间调整
 - **倒计时每秒跳动**（可关闭省电），精确到「距高峰 / 距谷时 hh:mm:ss」
 - **法定节假日感知**：节假日全天算谷时；**调休补班的周末**照常有峰谷之分
@@ -111,7 +115,10 @@ gradle :app:assembleDebug        # 出调试包
 2. 打开 App，粘贴 DeepSeek API Key（在 [platform.deepseek.com](https://platform.deepseek.com) → **API keys** 创建），
    点 **保存并启动**；
 3. 按提示完成小米保活设置（见第 6 节，**这步不做的话刷新会被系统冻结**）；
-4. 回到桌面，**长按空白处 → 添加小部件 / 桌面工具 → 找到「DeepSeek 余额与峰谷」** → 拖到桌面；
+4. 回到桌面，**长按空白处 → 添加小部件 / 桌面工具**，两种尺寸任选：
+   - 「**DeepSeek 余额与峰谷**」—— 4×2 深色大卡片，信息最全；
+   - 「**DeepSeek 余额（2×2 紧凑）**」—— 2×2 白底蓝框，适合和别的图标挤在一起；
+   拖到桌面即可；
 5. 如果是从桌面添加的插件，系统会先跳到配置页，点 **完成，放到桌面**。
 
 > API Key 只保存在 App 私有目录的 SharedPreferences 里，插件只访问 `api.deepseek.com` 的
@@ -180,6 +187,7 @@ DeepSeekBalanceWidget/
 │  │  │  └─ DateUtil.kt                   # 一律用北京时间
 │  │  ├─ data/
 │  │  │  ├─ DeepSeekApi.kt                # /user/balance 响应解析（纯函数，可单测）
+│  │  │  ├─ DailyUsageStore.kt            # 今日已用累计（微元 Long 存取，跨天归零）
 │  │  │  ├─ BalanceRepository.kt          # OkHttp 请求 + 错误映射（401/402/429/网络）
 │  │  │  ├─ AppSettings.kt                # 设置项（StateFlow）
 │  │  │  ├─ BalanceStore.kt               # 余额快照缓存（进程被杀也不掉数字）
@@ -189,15 +197,20 @@ DeepSeekBalanceWidget/
 │  │  │  ├─ ServiceController.kt          # 拉起与存活校验
 │  │  │  └─ Notifier.kt                   # 常驻通知（第二块屏）
 │  │  ├─ widget/
-│  │  │  ├─ BalanceWidgetProvider.kt      # AppWidgetProvider
-│  │  │  ├─ WidgetRenderer.kt             # ★ RemoteViews 渲染与动态配色
+│  │  │  ├─ BalanceWidgetProvider.kt      # 4×2 插件 provider（updateAll 是刷新全部插件的入口）
+│  │  │  ├─ CompactBalanceWidgetProvider.kt # 2×2 插件 provider（浅色版）
+│  │  │  ├─ WidgetRenderer.kt             # ★ 4×2 RemoteViews 渲染与动态配色
+│  │  │  ├─ CompactWidgetRenderer.kt      # ★ 2×2 RemoteViews 渲染（白底蓝框）
+│  │  │  ├─ WidgetIntents.kt              # 点击事件 PendingIntent 工厂（两种插件共用）
 │  │  │  ├─ WidgetActionReceiver.kt       # ↻ 刷新 / 峰谷徽章切换
 │  │  │  └─ BootReceiver.kt               # 开机恢复
 │  │  └─ worker/
 │  │     ├─ BalanceRefreshWorker.kt       # 兜底刷新任务
 │  │     └─ WidgetWorkScheduler.kt        # 周期 + 立即任务调度
-│  ├─ res/layout/widget_balance.xml       # ★ 插件布局（只用 RemoteViews 支持的控件）
-│  └─ res/xml/widget_balance_info.xml     # 插件元数据（4x2、可缩放、配置页）
+│  ├─ res/layout/widget_balance.xml       # ★ 4×2 插件布局（只用 RemoteViews 支持的控件）
+│  ├─ res/layout/widget_balance_compact.xml # ★ 2×2 插件布局
+│  ├─ res/xml/widget_balance_info.xml     # 4×2 插件元数据（可缩放、配置页）
+│  └─ res/xml/widget_balance_compact_info.xml # 2×2 插件元数据（targetCell 2×2）
 ├─ app/src/test/...                       # 单元测试：峰谷判定 + 余额解析
 └─ docs/
    ├─ widget-preview.png                  # 预览图
@@ -223,6 +236,7 @@ Android 的桌面插件本身最快只能半小时刷新一次，5 秒级别必�
 
 - `app/src/test/.../PeakSchedulerTest.kt`：22 个用例，覆盖工作日/午间谷/周末/节假日/调休补班/跨周末切换/边界前后一致性/倒计时格式；
 - `app/src/test/.../DeepSeekApiTest.kt`：9 个用例，覆盖官方示例响应、多币种、余额为零、鉴权失败、非法 JSON、Key 粗校验；
+- `app/src/test/.../DailyUsageStoreTest.kt`：6 个用例，覆盖「今日已用」的跨天归零、首次无基准、连续扣费累加、充值不冲抵、微元解析精度；
 - `docs/verify_peak_logic.py`：用 Python 独立复刻同一套算法，对 2026 全年 **525,600 个时刻逐分钟扫描**，
   校验「切换时刻只落在 09:00/12:00/14:00/18:00」「切换前后档位必然相反」「倒计时恒为正且不超过 10 天」。
   运行：`python docs/verify_peak_logic.py`

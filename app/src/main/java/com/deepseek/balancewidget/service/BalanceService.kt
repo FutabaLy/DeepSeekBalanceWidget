@@ -19,6 +19,7 @@ import com.deepseek.balancewidget.core.WidgetStateBus
 import com.deepseek.balancewidget.data.AppSettings
 import com.deepseek.balancewidget.data.BalanceRepository
 import com.deepseek.balancewidget.data.BalanceStore
+import com.deepseek.balancewidget.data.DailyUsageStore
 import com.deepseek.balancewidget.widget.BalanceWidgetProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -146,10 +147,14 @@ class BalanceService : Service() {
         launchHolidayAutoUpdate()
 
         val cached = withContext(Dispatchers.IO) { BalanceStore.load(this@BalanceService) }
+        val usedToday = withContext(Dispatchers.IO) {
+            DailyUsageStore.usedTodayYuan(this@BalanceService)
+        }
         if (cached != null) {
             WidgetStateBus.update {
                 it.copy(
                     balance = cached.toBalanceInfo(),
+                    usedToday = usedToday,
                     isAvailable = cached.isAvailable,
                     hasData = true,
                     lastSuccessAt = cached.updatedAt,
@@ -232,10 +237,17 @@ class BalanceService : Service() {
         val key = settings.apiKey.value
         return repository.fetchBalance(key).fold(
             onSuccess = { snapshot ->
-                withContext(Dispatchers.IO) { BalanceStore.save(this@BalanceService, snapshot) }
+                withContext(Dispatchers.IO) {
+                    BalanceStore.save(this@BalanceService, snapshot)
+                }
+                // 用相邻两次刷新的差值累计「今日已用」
+                val usedMicro = withContext(Dispatchers.IO) {
+                    DailyUsageStore.onBalance(this@BalanceService, snapshot.primary?.totalBalance)
+                }
                 WidgetStateBus.update {
                     it.copy(
                         balance = snapshot.primary,
+                        usedToday = DailyUsageStore.microToYuan(usedMicro),
                         isAvailable = snapshot.isAvailable,
                         hasData = true,
                         lastSuccessAt = System.currentTimeMillis(),
@@ -302,6 +314,7 @@ class BalanceService : Service() {
         val showSeconds = settings.tickEverySecond.value
         return buildString {
             append(state.balanceText).append('|')
+            append(state.usedTodayText).append('|')
             append(state.tier).append('|')
             append(state.countdownText(showSeconds)).append('|')
             append(state.countdownLabel).append('|')

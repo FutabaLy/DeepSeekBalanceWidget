@@ -10,6 +10,7 @@ import com.deepseek.balancewidget.core.DateUtil
 import com.deepseek.balancewidget.core.HolidayCalendar
 import com.deepseek.balancewidget.data.AppSettings
 import com.deepseek.balancewidget.data.BalanceStore
+import com.deepseek.balancewidget.data.DailyUsageStore
 import com.deepseek.balancewidget.core.WidgetState
 import com.deepseek.balancewidget.service.BalanceService
 import com.deepseek.balancewidget.worker.WidgetWorkScheduler
@@ -70,37 +71,60 @@ class BalanceWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onDisabled(context: Context) {
-        Log.i(TAG, "插件实例已全部移除")
-        // 插件都删了就没必要继续跑前台服务，省电
-        BalanceService.stop(context)
-        WidgetWorkScheduler.cancelPeriodic(context)
+        Log.i(TAG, "4×2 实例已全部移除")
+        // 两类插件都清空了才停服务，省电同时不误伤另一种尺寸
+        stopServiceIfNoWidgetLeft(context)
     }
 
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
         super.onDeleted(context, appWidgetIds)
-        if (!WidgetRenderer.hasWidgetInstances(context)) {
-            BalanceService.stop(context)
-            WidgetWorkScheduler.cancelPeriodic(context)
-        }
+        stopServiceIfNoWidgetLeft(context)
+    }
+
+    /** 只有两类插件（4×2 / 2×2）都清空时才停服务。 */
+    private fun stopServiceIfNoWidgetLeft(context: Context) {
+        if (hasAnyWidgetInstances(context)) return
+        BalanceService.stop(context)
+        WidgetWorkScheduler.cancelPeriodic(context)
     }
 
     companion object {
         private const val TAG = "BalanceWidgetProvider"
 
-        /** 立即刷新所有插件实例。 */
+        /**
+         * 立即刷新所有插件实例。
+         *
+         * 这里是「刷新全部插件」的唯一入口：4×2 画完后顺手把 2×2 也刷新，
+         * 所以服务、兜底任务、设置页改动都只用调这一个方法。
+         */
         fun updateAll(context: Context, state: WidgetState? = null) {
+            val s = state ?: currentState(context)
+            updateStandard(context, s)
+            CompactBalanceWidgetProvider.updateAll(context, s)
+        }
+
+        private fun updateStandard(context: Context, state: WidgetState) {
             val manager = AppWidgetManager.getInstance(context) ?: return
             val ids = manager.getAppWidgetIds(ComponentName(context, BalanceWidgetProvider::class.java))
             if (ids == null || ids.isEmpty()) return
-            val s = state ?: currentState(context)
             val settings = AppSettings.get(context)
             val views = WidgetRenderer.build(
                 context,
-                s,
+                state,
                 settings.tickEverySecond.value,
                 settings.intervalSeconds.value,
             )
             manager.updateAppWidget(ids, views)
+        }
+
+        /** 桌面上是否还有任意一种插件实例（4×2 或 2×2）。 */
+        fun hasAnyWidgetInstances(context: Context): Boolean {
+            if (WidgetRenderer.hasWidgetInstances(context)) return true
+            val manager = AppWidgetManager.getInstance(context) ?: return false
+            val ids = manager.getAppWidgetIds(
+                ComponentName(context, CompactBalanceWidgetProvider::class.java),
+            )
+            return ids != null && ids.isNotEmpty()
         }
 
         /**
@@ -119,6 +143,7 @@ class BalanceWidgetProvider : AppWidgetProvider() {
                 countdownMillis = com.deepseek.balancewidget.core.PeakScheduler.timeUntilBoundary(now).toMillis(),
                 dayContext = HolidayCalendar.dayContext(now),
                 balance = cached?.toBalanceInfo(),
+                usedToday = DailyUsageStore.usedTodayYuan(context),
                 isAvailable = cached?.isAvailable ?: true,
                 hasData = cached != null,
                 lastSuccessAt = cached?.updatedAt ?: 0L,

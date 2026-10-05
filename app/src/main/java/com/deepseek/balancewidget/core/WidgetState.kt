@@ -19,6 +19,8 @@ data class WidgetState(
 
     /** 余额（未同步成功时为 null）。 */
     val balance: BalanceInfo? = null,
+    /** 今日已用（元）。null = 当天还没成功刷新过，无法统计。 */
+    val usedToday: Double? = null,
     /** 账户是否还有余额可用。 */
     val isAvailable: Boolean = true,
     /** 是否曾经同步成功过。 */
@@ -38,6 +40,14 @@ data class WidgetState(
     /** 大号余额文本，例如「¥ 109.29」。 */
     val balanceText: String
         get() = balance?.let { "${it.currencySymbol}${it.totalBalance}" } ?: "--"
+
+    /** 今日已用金额文本（不带币种符号），例如「2.46」。 */
+    val usedTodayText: String
+        get() = usedToday?.let { String.format(java.util.Locale.CHINA, "%.2f", it) } ?: "--"
+
+    /** 今日已用整行文本，例如「今日已用 ¥2.46」。 */
+    fun usedTodayLine(prefix: String): String =
+        "$prefix ${balance?.currencySymbol ?: "¥"}$usedTodayText"
 
     /** 「距谷时 / 距高峰」标签，取决于下一阶段是什么。 */
     val countdownLabel: String

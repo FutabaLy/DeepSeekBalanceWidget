@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.deepseek.balancewidget.data.AppSettings
 import com.deepseek.balancewidget.data.BalanceRepository
 import com.deepseek.balancewidget.data.BalanceStore
+import com.deepseek.balancewidget.data.DailyUsageStore
 import com.deepseek.balancewidget.widget.BalanceWidgetProvider
 
 /**
@@ -31,6 +32,7 @@ class BalanceRefreshWorker(
         return repository.fetchBalance(apiKey).fold(
             onSuccess = { snapshot ->
                 BalanceStore.save(context, snapshot)
+                DailyUsageStore.onBalance(context, snapshot.primary?.totalBalance)
                 BalanceWidgetProvider.updateAll(context)
                 Log.i(TAG, "兜底刷新成功：${snapshot.totalText}")
                 Result.success()

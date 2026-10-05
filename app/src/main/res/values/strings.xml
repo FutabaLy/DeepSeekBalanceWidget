@@ -4,8 +4,12 @@
 
     <string name="widget_name">DeepSeek 余额与峰谷</string>
     <string name="widget_description">桌面显示 DeepSeek 账户余额，并实时标注当前是高峰还是空闲（谷时）时段，默认每 5 秒刷新余额。</string>
+    <string name="widget_compact_name">DeepSeek 余额（2×2 紧凑）</string>
+    <string name="widget_compact_description">紧凑版：余额、今日已用、峰谷时段与倒计时，一个刷新按钮。</string>
     <string name="widget_title_default">DeepSeek 余额</string>
     <string name="widget_balance_placeholder">--</string>
+    <string name="widget_used_today">今日已用</string>
+    <string name="widget_used_placeholder">今日已用 --</string>
     <string name="widget_countdown_label_placeholder">距高峰</string>
     <string name="widget_countdown_placeholder">--:--:--</string>
     <string name="widget_sync_idle">待同步</string>
