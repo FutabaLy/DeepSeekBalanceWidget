@@ -9,3 +9,6 @@ captures/
 .cxx/
 *.apk
 *.keystore
+*.jks
+*.p12
+signing/

@@ -80,6 +80,12 @@ git tag v1.1.0 && git push origin v1.1.0
 
 工作流会顺带跑单元测试，测试挂了就不会出包（这一步能帮你挡住峰谷判定被改错的情况）。
 
+> **关于签名**：工作流用仓库 secret 里的固定密钥签名（`SIGNING_KEYSTORE_BASE64` /
+> `SIGNING_STORE_PASSWORD` / `SIGNING_KEY_ALIAS` / `SIGNING_KEY_PASSWORD`），所以每个新版本都能
+> **直接覆盖安装**。没配这 4 个 secret 时会退回 Android 默认的 debug 签名 —— 而 GitHub runner
+> 每次构建都会重新生成 `debug.keystore`，签出来的包一次一个样，新版本装不上去，只能卸载重装
+> （API Key 等设置会一起丢掉）。克隆本仓库自己用时，记得把这 4 个 secret 配好。
+
 ### 方式 B：Android Studio 本地编译
 
 1. 下载安装 [Android Studio](https://developer.android.com/studio)（自带 JDK 17 和 Android SDK，**不需要**单独装 Java）；

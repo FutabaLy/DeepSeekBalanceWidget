@@ -2,7 +2,7 @@ name: Build APK
 
 # 三种触发方式：
 # 1. 手动点 Actions → Build APK → Run workflow（推荐）
-# 2. 打 tag（v1.0.0）自动构建并创建 Release
+# 2. 打 tag（v1.1.0）自动构建并创建 Release
 # 3. 推送到 main 分支自动构建，产物在 Artifacts 里
 on:
   workflow_dispatch:
@@ -14,6 +14,14 @@ on:
 
 permissions:
   contents: write
+
+# 稳定签名：仓库里配好这 4 个 secret 就会用同一把密钥签名，
+# 这样每个新版本都能直接覆盖安装（不配则退回默认 debug 签名，逐次构建签名都不同，只能卸载重装）。
+# Gradle 会把 ORG_GRADLE_PROJECT_xxx 环境变量当作 -Pxxx 项目属性读取。
+env:
+  ORG_GRADLE_PROJECT_DSBW_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+  ORG_GRADLE_PROJECT_DSBW_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+  ORG_GRADLE_PROJECT_DSBW_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
 
 jobs:
   build:
@@ -29,6 +37,18 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+
+      - name: 准备签名密钥
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/deepseek-widget.jks"
+            echo "ORG_GRADLE_PROJECT_DSBW_STORE_FILE=$RUNNER_TEMP/deepseek-widget.jks" >> "$GITHUB_ENV"
+            echo "已写入签名密钥，本次使用稳定签名"
+          else
+            echo "::warning::未配置 SIGNING_KEYSTORE_BASE64，本次退回 debug 签名；这种包的签名每次构建都不同，无法覆盖安装"
+          fi
 
       # 直接使用系统 Gradle 8.9，无需仓库里放 gradle-wrapper.jar
       - name: 安装并缓存 Gradle
@@ -47,6 +67,16 @@ jobs:
 
       - name: 编译 Release APK
         run: gradle :app:assembleRelease --no-daemon --stacktrace
+
+      - name: 校验 APK 签名（确认能覆盖安装旧版本）
+        run: |
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          APKSIGNER=$(ls "$SDK"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
+          echo "apksigner: $APKSIGNER"
+          for apk in $(find app/build/outputs/apk -name '*.apk' | sort); do
+            echo "===== $apk"
+            "$APKSIGNER" verify --print-certs "$apk" | sed -n '1,8p'
+          done
 
       - name: 汇总产物信息
         run: |

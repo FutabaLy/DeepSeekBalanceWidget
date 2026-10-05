@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 峰/谷徽章（空闲/谷时）：胶囊圆角 + 青绿 22% 填充，文字用同色实色。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="100dp" />
+    <solid android:color="#3812D6A0" />
+</shape>

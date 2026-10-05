@@ -4,8 +4,6 @@ import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.res.ColorStateList
-import android.graphics.Color
 import android.os.Build
 import android.util.TypedValue
 import android.view.View
@@ -21,7 +19,8 @@ import com.deepseek.balancewidget.core.WidgetState
  * - 空闲（谷）：青绿 #12D6A0，卡片偏冷蓝黑
  * - 高峰（峰）：琥珀 #FFB020，卡片偏暖黑
  *
- * 大字余额是主视觉，峰/谷徽章与倒计时一眼可辨。
+ * 卡片底色、顶部标题带、峰谷徽章三者都是 drawable（见 res/drawable/bg_widget_*、
+ * bg_header_*、bg_badge_*），这里只负责按档位切换资源，保证圆角与分层不会被抹掉。
  */
 object WidgetRenderer {
 
@@ -33,8 +32,6 @@ object WidgetRenderer {
     private const val COLOR_TEXT_MAIN = 0xFFFFFFFF.toInt()
     private const val COLOR_TEXT_SUB = 0xFFC6D6E8.toInt()
     private const val COLOR_TEXT_ERROR = 0xFFFF8A80.toInt()
-    private const val COLOR_BG_PEAK = 0xE81C1206.toInt()
-    private const val COLOR_BG_OFF_PEAK = 0xE80A1A24.toInt()
 
     const val ACTION_REFRESH = "com.deepseek.balancewidget.action.REFRESH"
     const val ACTION_TOGGLE_TIER = "com.deepseek.balancewidget.action.TOGGLE_TIER"
@@ -48,15 +45,30 @@ object WidgetRenderer {
         val views = RemoteViews(context.packageName, R.layout.widget_balance)
 
         val accent = if (state.tier.isPeak) COLOR_PEAK else COLOR_OFF_PEAK
-        val bgColor = if (state.tier.isPeak) COLOR_BG_PEAK else COLOR_BG_OFF_PEAK
+        val peak = state.tier.isPeak
 
-        // 卡片背景与徽章
-        // 注意：这里优先用 setBackgroundTintList 而不是 setBackgroundColor —— 后者会丢掉
-        // bg_badge 的圆角形状；tint 才能在保留胶囊圆角的同时换色。
-        // 但 RemoteViews.setColorStateList 是 API 31 才有的方法，低版本宿主（桌面）执行这条
-        // action 时会抛 ActionException 让插件显示「加载失败」，所以老系统退回纯色背景。
-        views.setInt(R.id.widget_root, "setBackgroundColor", bgColor)
-        setBackgroundTint(views, R.id.tv_tier, withAlpha(accent, 0x38))
+        // 背景分三层，全部用 setBackgroundResource 切换（View.setBackgroundResource 带
+        // @RemotableViewMethod，任何 Android 版本都支持，也不需要 API 31 的 setColorStateList）：
+        //   1. 卡片底 —— 18dp 圆角 + 渐变 + 1dp 描边
+        //   2. 顶部标题带 —— 比卡片亮一档，做出背景分层
+        //   3. 峰/谷徽章 —— 胶囊底色
+        // 千万不要改回 setInt(..., "setBackgroundColor", ...)：那会把 shape 换成纯色 ColorDrawable，
+        // 圆角、渐变、描边全部丢失，插件就变成一块方方正正的色块。
+        views.setInt(
+            R.id.widget_root,
+            "setBackgroundResource",
+            if (peak) R.drawable.bg_widget_peak else R.drawable.bg_widget_off_peak,
+        )
+        views.setInt(
+            R.id.widget_header,
+            "setBackgroundResource",
+            if (peak) R.drawable.bg_header_peak else R.drawable.bg_header_off_peak,
+        )
+        views.setInt(
+            R.id.tv_tier,
+            "setBackgroundResource",
+            if (peak) R.drawable.bg_badge_peak else R.drawable.bg_badge_off_peak,
+        )
         views.setTextColor(R.id.tv_tier, accent)
         views.setTextViewText(
             R.id.tv_tier,
@@ -83,12 +95,11 @@ object WidgetRenderer {
         views.setTextViewText(R.id.tv_balance, state.balanceText)
         views.setTextColor(R.id.tv_balance, COLOR_TEXT_MAIN)
 
-        // 倒计时
-        views.setTextViewText(
-            R.id.tv_countdown,
-            "${state.countdownLabel} ${state.countdownText(showSeconds)}",
-        )
+        // 倒计时：文案与等宽数字拆成两个 TextView，秒数跳动时不会左右抖动
+        views.setTextViewText(R.id.tv_countdown, state.countdownLabel)
+        views.setTextViewText(R.id.tv_countdown_num, state.countdownText(showSeconds))
         views.setTextColor(R.id.tv_countdown, COLOR_TEXT_SUB)
+        views.setTextColor(R.id.tv_countdown_num, COLOR_TEXT_SUB)
 
         // 节假日 / 补班标记
         val badge = state.dayBadge()
@@ -127,18 +138,6 @@ object WidgetRenderer {
     private fun twoDecimals(raw: String): String {
         val d = raw.toDoubleOrNull() ?: return raw
         return String.format(java.util.Locale.CHINA, "%.2f", d)
-    }
-
-    private fun withAlpha(color: Int, alpha: Int): Int =
-        Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
-
-    /** 徽章底色：API 31+ 用 tint 保住胶囊圆角，低版本退回纯色（丢圆角但不会让插件加载失败）。 */
-    private fun setBackgroundTint(views: RemoteViews, viewId: Int, color: Int) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            views.setColorStateList(viewId, "setBackgroundTintList", ColorStateList.valueOf(color))
-        } else {
-            views.setInt(viewId, "setBackgroundColor", color)
-        }
     }
 
     fun dp(context: Context, value: Float): Int = TypedValue.applyDimension(
