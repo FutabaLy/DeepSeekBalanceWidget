@@ -212,14 +212,14 @@ DeepSeekBalanceWidget/
 │  ├─ res/layout/widget_balance.xml       # ★ 4×2 插件布局（只用 RemoteViews 支持的控件）
 │  ├─ res/layout/widget_balance_compact.xml # ★ 2×2 插件布局
 │  ├─ res/layout/widget_balance_compact_cover.xml # ★ 2×2 封面层布局（整张图）
-│  ├─ res/drawable-nodpi/compact_cover.webp # 2×2 封面图（圆角已烧进图片，见 docs/make_cover.py）
+│  ├─ res/drawable-nodpi/compact_cover.webp # 2×2 封面图（透明底抠图，见 docs/make_cover.py）
 │  ├─ res/xml/widget_balance_info.xml     # 4×2 插件元数据（可缩放、配置页）
 │  └─ res/xml/widget_balance_compact_info.xml # 2×2 插件元数据（targetCell 2×2）
 ├─ app/src/test/...                       # 单元测试：峰谷判定 + 余额解析
 └─ docs/
    ├─ widget-preview.png                  # 预览图
    ├─ make_preview.py                     # 预览图生成脚本
-   ├─ make_cover.py                       # 2×2 封面图（圆角 + WebP 压缩）生成脚本
+   ├─ make_cover.py                       # 2×2 封面图生成脚本（保留透明底 + 防黑边 + WebP 压缩）
    └─ verify_peak_logic.py                # 峰谷逻辑独立验证（全年逐分钟扫描）
 ```
 

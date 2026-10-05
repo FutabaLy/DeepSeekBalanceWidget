@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  2×2 紧凑插件的封面（第一层）：整张图片铺满，点一下翻到数据面。
+  2×2 紧凑插件的封面（第一层）：抠好的角色图铺在卡片上，点一下翻到数据面。
 
-  图片四角是透明圆角（见 docs/make_cover.py），所以贴到桌面就是圆角的，
-  不需要再套一层卡片背景。
+  图片本身是透明底（见 docs/make_cover.py），所以背景透出壁纸、没有底板；
+  用 fitCenter 是为了整张图都露出来（centerCrop 会把两侧的头发裁掉）。
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/compact_cover_root"
@@ -15,6 +15,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:contentDescription="@string/widget_compact_cover_desc"
-        android:scaleType="centerCrop"
+        android:scaleType="fitCenter"
         android:src="@drawable/compact_cover" />
 </FrameLayout>
