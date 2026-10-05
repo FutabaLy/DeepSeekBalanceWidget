@@ -18,14 +18,16 @@ import kotlin.math.ceil
  * 为什么非要画成图：RemoteViews 给 TextView 只能用 `setTextColor` 上**纯色**，没有 shader
  * 这条通路，所以「左深蓝 → 右天蓝」这种渐变字只能先在 App 里画好，再用
  * `setImageViewBitmap` 传过去 —— 位图在 Binder 里走 ashmem（>16KB 即共享内存），
- * 不占 1MB 事务限额，每秒重推也扛得住。
+ * 不占 1MB 事务限额，动画通过局部更新推送。
  *
  * 位图按屏幕密度绘制，ImageView 用 wrap_content + centerInside 就能 1:1 显示、不缩放。
  */
 object GradientTextRenderer {
 
-    /** 缓存最近若干张（动画有 12 个相位，够放）。 */
-    private val cache = LruCache<String, Bitmap>(16)
+    /** 位图缓存限制为 4 MiB，不随动画帧数无限增长。 */
+    private val cache = object : LruCache<String, Bitmap>(4 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+    }
 
     /** 余额大字的字号（sp）。 */
     const val BALANCE_TEXT_SP = 30f
@@ -34,8 +36,9 @@ object GradientTextRenderer {
     const val BALANCE_GRADIENT_START = 0xFF1B3A8C.toInt()
     const val BALANCE_GRADIENT_END = 0xFF5AA8FF.toInt()
 
-    /** 动画一共几格（每格 1 秒，正好跟着服务的刷新节奏走，不额外耗电）。 */
-    const val ANIMATION_STEPS = 12
+    /** 20 fps，12 秒一轮。 */
+    const val FRAME_MS = 50L
+    const val ANIMATION_STEPS = 240
 
     @Volatile
     private var cachedTypeface: Typeface? = null
@@ -55,10 +58,10 @@ object GradientTextRenderer {
     /**
      * 当前动画相位（0 到 [ANIMATION_STEPS] - 1）。
      *
-     * 插件没法做逐帧动画（RemoteViews 不支持），只能靠「每秒重推一张相位不同的位图」来实现；
-     * 好在插件本来每秒就在刷新倒计时，等于白捡。息屏或服务停掉时会停在当前相位。
+     * 插件没法做逐帧动画（RemoteViews 不支持），通过独立协程局部推送相位不同的位图；
+     * 不额外请求余额接口。息屏或服务停掉时会停在当前相位。
      */
-    fun currentPhase(): Int = ((System.currentTimeMillis() / 1000) % ANIMATION_STEPS).toInt()
+    fun currentPhase(): Int = ((android.os.SystemClock.elapsedRealtime() / FRAME_MS) % ANIMATION_STEPS).toInt()
 
     /**
      * 画一段渐变文字。

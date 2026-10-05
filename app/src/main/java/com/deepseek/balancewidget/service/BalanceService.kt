@@ -29,6 +29,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -92,7 +93,17 @@ class BalanceService : Service() {
 
         isRunning = true
         scope.launch { bootstrap() }
+        screenOn = getSystemService(PowerManager::class.java)?.isInteractive == true
         startLoop()
+        scope.launch {
+            while (isActive) {
+                if (screenOn && settings.tickEverySecond.value) {
+                    com.deepseek.balancewidget.widget.CompactBalanceWidgetProvider.animateBalance(
+                        this@BalanceService, WidgetStateBus.current())
+                }
+                delay(com.deepseek.balancewidget.widget.GradientTextRenderer.FRAME_MS)
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -191,6 +202,7 @@ class BalanceService : Service() {
 
                 WidgetStateBus.update {
                     it.copy(
+                        usedToday = DailyUsageStore.usedTodayYuan(this@BalanceService),
                         tier = tier,
                         autoTier = settings.isAutoTier,
                         nextTier = nextTier,
@@ -232,17 +244,20 @@ class BalanceService : Service() {
     }
 
     /** @return 是否成功 */
-    private suspend fun fetchBalance(): Boolean {
+    private suspend fun fetchBalance(): Boolean = DailyUsageStore.refreshMutex.withLock {
         WidgetStateBus.update { it.copy(loading = true) }
         val key = settings.apiKey.value
-        return repository.fetchBalance(key).fold(
+        val baseUrl = settings.baseUrl.value
+        repository.fetchBalance(key).fold(
             onSuccess = { snapshot ->
+                if (key != settings.apiKey.value || baseUrl != settings.baseUrl.value) return@fold false
                 withContext(Dispatchers.IO) {
                     BalanceStore.save(this@BalanceService, snapshot)
                 }
                 // 用相邻两次刷新的差值累计「今日已用」
                 val usedMicro = withContext(Dispatchers.IO) {
-                    DailyUsageStore.onBalance(this@BalanceService, snapshot.primary?.totalBalance)
+                    DailyUsageStore.onBalance(this@BalanceService, snapshot.primary?.totalBalance,
+                        DailyUsageStore.sourceId(key, baseUrl), snapshot.primary?.currency ?: "CNY")
                 }
                 WidgetStateBus.update {
                     it.copy(

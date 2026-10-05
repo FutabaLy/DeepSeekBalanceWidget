@@ -71,47 +71,16 @@ object CompactWidgetRenderer {
             if (peak) R.drawable.bg_compact_pill_peak else R.drawable.bg_compact_pill_off_peak,
         )
 
-        views.setTextViewText(R.id.compact_title, context.getString(R.string.widget_title_default))
-        views.setTextColor(R.id.compact_title, COLOR_BRAND)
+        setText(context, views, R.id.compact_title, context.getString(R.string.widget_title_default), 12f, COLOR_BRAND)
 
-        val error = state.lastError
-        // 余额大字：左深蓝 → 右天蓝的循环渐变动画。RemoteViews 给 TextView 只能上纯色，
-        // 所以这里画成位图再 setImageViewBitmap；相位每秒推一格，跟着刷新节奏流动
-        val balanceBitmap = GradientTextRenderer.render(
-            text = state.balanceText,
-            textSizeSp = GradientTextRenderer.BALANCE_TEXT_SP,
-            density = context.resources.displayMetrics.density,
-            startColor = if (error != null) COLOR_ERROR else GradientTextRenderer.BALANCE_GRADIENT_START,
-            endColor = if (error != null) COLOR_ERROR else GradientTextRenderer.BALANCE_GRADIENT_END,
-            typeface = GradientTextRenderer.balanceTypeface(context),
-            phase = if (error != null) 0 else GradientTextRenderer.currentPhase(),
-        )
-        if (balanceBitmap != null) {
-            views.setImageViewBitmap(R.id.compact_balance, balanceBitmap)
-            views.setContentDescription(R.id.compact_balance, state.balanceText)
-        }
-
-        // 第三行：正常显示「今日已用 ¥x.xx」，出错时整行显示原因（紧凑版没有别的位置放提示）
-        if (error != null) {
-            views.setTextViewText(R.id.compact_used, error)
-            views.setTextColor(R.id.compact_used, COLOR_ERROR)
-        } else {
-            views.setTextViewText(
-                R.id.compact_used,
-                state.usedTodayLine(context.getString(R.string.widget_used_today)),
-            )
-            views.setTextColor(R.id.compact_used, COLOR_USED)
-        }
-
-        views.setTextViewText(
-            R.id.compact_tier,
-            state.tier.shortLabel + if (state.autoTier) "" else "*",
-        )
-        views.setTextColor(R.id.compact_tier, COLOR_PILL_TEXT)
-
-        // 倒计时：累计小时制（57:16:52），窄卡片上不会被截断
-        views.setTextViewText(R.id.compact_countdown, state.countdownTextCompact(showSeconds))
-        views.setTextColor(R.id.compact_countdown, accent)
+        setBalance(context, views, state)
+        setText(context, views, R.id.compact_used,
+            state.lastError ?: state.usedTodayLine(context.getString(R.string.widget_used_today)),
+            11f, if (state.lastError != null) COLOR_ERROR else COLOR_USED)
+        setText(context, views, R.id.compact_tier,
+            state.tier.shortLabel + if (state.autoTier) "" else "*", 11f, COLOR_PILL_TEXT)
+        setText(context, views, R.id.compact_countdown,
+            state.countdownTextCompact(showSeconds), 14f, accent)
 
         // 刷新按钮：请求中变半透明（setFloat 需 API 31+，低版本跳过这层反馈）
         views.setImageViewResource(R.id.compact_refresh, R.drawable.ic_refresh_blue)
@@ -128,6 +97,30 @@ object CompactWidgetRenderer {
 
         return views
     }
+
+    private fun setText(context: Context, views: RemoteViews, id: Int, text: String, size: Float, color: Int) {
+        views.setImageViewBitmap(id, GradientTextRenderer.render(text, size,
+            context.resources.displayMetrics.scaledDensity, color, color,
+            GradientTextRenderer.balanceTypeface(context)))
+        views.setContentDescription(id, text)
+    }
+
+    private fun setBalance(context: Context, views: RemoteViews, state: WidgetState) {
+        views.setImageViewBitmap(R.id.compact_balance, GradientTextRenderer.render(
+            state.balanceText, GradientTextRenderer.BALANCE_TEXT_SP,
+            context.resources.displayMetrics.scaledDensity,
+            if (state.lastError != null) COLOR_ERROR else GradientTextRenderer.BALANCE_GRADIENT_START,
+            if (state.lastError != null) COLOR_ERROR else GradientTextRenderer.BALANCE_GRADIENT_END,
+            GradientTextRenderer.balanceTypeface(context),
+            if (state.lastError != null) 0 else GradientTextRenderer.currentPhase()))
+        views.setContentDescription(R.id.compact_balance, state.balanceText)
+    }
+
+    /** Only the balance bitmap is sent for animation frames. */
+    fun animationFrame(context: Context, state: WidgetState): RemoteViews =
+        RemoteViews(context.packageName, R.layout.widget_balance_compact).also {
+            setBalance(context, it, state)
+        }
 
     private fun flipIntent(context: Context, widgetId: Int) =
         WidgetIntents.broadcast(

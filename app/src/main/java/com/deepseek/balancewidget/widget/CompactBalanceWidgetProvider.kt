@@ -109,6 +109,7 @@ class CompactBalanceWidgetProvider : AppWidgetProvider() {
         }
 
         /** 立即刷新所有 2×2 插件实例（各自按自己的翻面状态渲染）。 */
+        @Synchronized
         fun updateAll(context: Context, state: WidgetState? = null) {
             val manager = AppWidgetManager.getInstance(context) ?: return
             val ids = manager.getAppWidgetIds(
@@ -127,6 +128,7 @@ class CompactBalanceWidgetProvider : AppWidgetProvider() {
         }
 
         /** 只刷新一个实例（翻面时用，避免动到别的 2×2）。 */
+        @Synchronized
         fun updateOne(context: Context, widgetId: Int) {
             val manager = AppWidgetManager.getInstance(context) ?: return
             val tick = AppSettings.get(context).tickEverySecond.value
@@ -135,6 +137,16 @@ class CompactBalanceWidgetProvider : AppWidgetProvider() {
                 widgetId,
                 buildFor(context, widgetId, BalanceWidgetProvider.currentState(context), tick),
             )
+        }
+
+        /** Serialize with flips so an animation frame cannot replace the cover layout. */
+        @Synchronized
+        fun animateBalance(context: Context, state: WidgetState) {
+            if (!state.hasData || state.lastError != null) return
+            val manager = AppWidgetManager.getInstance(context)
+            val ids = manager.getAppWidgetIds(ComponentName(context, CompactBalanceWidgetProvider::class.java))
+                .filter { !CompactFaceStore.isCover(context, it) }.toIntArray()
+            if (ids.isNotEmpty()) manager.partiallyUpdateAppWidget(ids, CompactWidgetRenderer.animationFrame(context, state))
         }
 
         /** 换了封面图：清掉「已推过封面」的记账，让下一次刷新把新图推上去。 */

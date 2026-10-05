@@ -1,5 +1,6 @@
 package com.deepseek.balancewidget.worker
 
+import kotlinx.coroutines.sync.withLock
 import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
@@ -19,20 +20,23 @@ class BalanceRefreshWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
 
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result = DailyUsageStore.refreshMutex.withLock {
         val context = applicationContext
         val settings = AppSettings.get(context)
         val apiKey = settings.apiKey.value
+        val baseUrl = settings.baseUrl.value
         if (apiKey.isBlank()) {
             Log.i(TAG, "未配置 API Key，跳过兜底刷新")
-            return Result.success()
+            return@withLock Result.success()
         }
 
         val repository = BalanceRepository { settings.baseUrl.value }
-        return repository.fetchBalance(apiKey).fold(
+        repository.fetchBalance(apiKey).fold(
             onSuccess = { snapshot ->
+                if (apiKey != settings.apiKey.value || baseUrl != settings.baseUrl.value) return@fold Result.success()
                 BalanceStore.save(context, snapshot)
-                DailyUsageStore.onBalance(context, snapshot.primary?.totalBalance)
+                DailyUsageStore.onBalance(context, snapshot.primary?.totalBalance,
+                        DailyUsageStore.sourceId(apiKey, baseUrl), snapshot.primary?.currency ?: "CNY")
                 BalanceWidgetProvider.updateAll(context)
                 Log.i(TAG, "兜底刷新成功：${snapshot.totalText}")
                 Result.success()

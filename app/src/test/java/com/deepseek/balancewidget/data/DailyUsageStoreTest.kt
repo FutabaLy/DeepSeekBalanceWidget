@@ -10,6 +10,30 @@ import org.junit.Test
  * 覆盖：跨天归零、首次无基准、连续扣费累加、充值不冲抵、余额原文字符串解析精度。
  */
 class DailyUsageStoreTest {
+    @Test
+    fun historyPreservesPreviousDaysAndReplacesCurrentTotal() {
+        val original = mapOf("2026-10-05" to 6_290_000L)
+        val next = DailyUsageStore.updateDays(original, "2026-10-06", 1_000_000L)
+        val updated = DailyUsageStore.updateDays(next, "2026-10-06", 3_360_000L)
+        assertEquals(6_290_000L, updated["2026-10-05"])
+        assertEquals(3_360_000L, updated["2026-10-06"])
+        assertEquals(9_650_000L, updated.values.sum())
+        assertEquals(1, original.size)
+    }
+
+    @Test
+    fun overflowIsRejectedInsteadOfWrappingBalance() {
+        assertNull(DailyUsageStore.toMicro("999999999999999999999999"))
+    }
+
+    @Test
+    fun accountFingerprintChangesWithKeyOrEndpoint() {
+        val first = DailyUsageStore.sourceId("key-a", "https://api.deepseek.com")
+        assertEquals(first, DailyUsageStore.sourceId("key-a", "https://api.deepseek.com/"))
+        org.junit.Assert.assertNotEquals(first, DailyUsageStore.sourceId("key-b", "https://api.deepseek.com"))
+        org.junit.Assert.assertNotEquals(first, DailyUsageStore.sourceId("key-a", "https://other.example"))
+    }
+
 
     @Test
     fun `跨天归零并重置基准`() {

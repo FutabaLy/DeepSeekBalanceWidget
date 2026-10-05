@@ -209,6 +209,12 @@ private fun SettingsScreen(
     var busyHoliday by remember { mutableStateOf(false) }
     var busyRefresh by remember { mutableStateOf(false) }
 
+    var showUsage by remember { mutableStateOf(false) }
+    if (showUsage) {
+        com.deepseek.balancewidget.ui.UsageScreen(onClose = { showUsage = false })
+        return
+    }
+
     // ---- 2×2 封面图：选图 → 裁剪 → 应用到插件
     var coverVersion by remember { mutableStateOf(CompactCoverStore.version(context)) }
     val hasCustomCover = remember(coverVersion) { CompactCoverStore.hasCustom(context) }
@@ -272,6 +278,10 @@ private fun SettingsScreen(
                     color = TextDim,
                     fontSize = 12.sp,
                 )
+
+                OutlinedButton(onClick = { showUsage = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("用量统计 · 消费记录")
+                }
 
                 // ---- 状态卡
                 SectionCard {

@@ -18,6 +18,7 @@ import java.math.RoundingMode
  * 只在服务/兜底任务成功刷新时调用，其余地方只读。
  */
 object DailyUsageStore {
+    val refreshMutex = kotlinx.coroutines.sync.Mutex()
 
     private const val PREFS = "deepseek_daily_usage"
     private const val KEY_DAY = "day"
@@ -33,12 +34,21 @@ object DailyUsageStore {
      * @param totalBalance 接口返回的 total_balance 原文（形如 "29.100000"），解析失败时只读不改。
      * @return 累计后的今日已用（微元）。
      */
-    fun onBalance(context: Context, totalBalance: String?): Long {
+    @Synchronized
+    fun onBalance(context: Context, totalBalance: String?, source: String = "", currency: String = "CNY"): Long {
         val current = toMicro(totalBalance) ?: return currentUsed(context)?.usedMicro ?: 0L
         val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        selectSource(prefs, source, currency)
         val today = todayKey()
 
-        val sameDay = prefs.getString(KEY_DAY, null) == today
+        val previousDay = prefs.getString(KEY_DAY, null)
+        val sameSource = prefs.getString("source", source) == source && prefs.getString("currency", currency) == currency
+        val sameDay = previousDay == today && sameSource
+        val history = readDays(prefs)
+        if (previousDay != null && sameSource && previousDay !in history) {
+            history[previousDay] = prefs.getLong(KEY_USED_MICRO, 0L)
+        }
+        if (!sameSource) history.clear()
         val lastMicro = if (sameDay && prefs.contains(KEY_LAST_MICRO)) {
             prefs.getLong(KEY_LAST_MICRO, current)
         } else {
@@ -50,7 +60,17 @@ object DailyUsageStore {
             lastMicro = lastMicro,
             currentMicro = current,
         )
+        val events = if (sameSource) org.json.JSONArray(prefs.getString("events", "[]")) else org.json.JSONArray()
+        val delta = if (lastMicro != null) (lastMicro - current).coerceAtLeast(0) else 0L
+        if (delta > 0) events.put(org.json.JSONObject().put("at", System.currentTimeMillis()).put("micro", delta))
+        val retained = org.json.JSONArray()
+        for (i in maxOf(0, events.length() - 1000) until events.length()) retained.put(events.get(i))
+        val updatedDays = updateDays(history, today, used)
         prefs.edit {
+            putString("source", source)
+            putString("currency", currency)
+            putString("days", org.json.JSONObject(updatedDays as Map<*, *>).toString())
+            putString("events", retained.toString())
             putString(KEY_DAY, today)
             putLong(KEY_USED_MICRO, used)
             putLong(KEY_LAST_MICRO, last)
@@ -98,6 +118,54 @@ object DailyUsageStore {
             .edit { clear() }
     }
 
+    private fun selectSource(prefs: android.content.SharedPreferences, source: String, currency: String) {
+        val oldSource = prefs.getString("source", null) ?: return // Upgrade the legacy ledger in place.
+        val oldCurrency = prefs.getString("currency", "CNY") ?: "CNY"
+        if (oldSource == source && oldCurrency == currency) return
+        val keys = listOf(KEY_DAY, KEY_USED_MICRO, KEY_LAST_MICRO, "days", "events", "source", "currency")
+        val archive = org.json.JSONObject()
+        keys.forEach { key -> prefs.all[key]?.let { archive.put(key, it) } }
+        val restored = org.json.JSONObject(prefs.getString("archive_" + source + "_" + currency + "", "{}"))
+        prefs.edit {
+            putString("archive_" + oldSource + "_" + oldCurrency + "", archive.toString())
+            keys.forEach { remove(it) }
+            restored.keys().forEach { key ->
+                if (key == KEY_USED_MICRO || key == KEY_LAST_MICRO) putLong(key, restored.getLong(key))
+                else putString(key, restored.getString(key))
+            }
+            putString("source", source)
+            putString("currency", currency)
+        }
+    }
+
+    internal fun updateDays(days: Map<String, Long>, day: String, used: Long): Map<String, Long> =
+        days + (day to used)
+
+    data class Event(val at: Long, val micro: Long)
+    data class History(val days: Map<String, Long> = emptyMap(), val events: List<Event> = emptyList(), val currency: String = "CNY")
+
+    private fun readDays(prefs: android.content.SharedPreferences): MutableMap<String, Long> {
+        val json = org.json.JSONObject(prefs.getString("days", "{}"))
+        return json.keys().asSequence().associateWith { json.getLong(it) }.toMutableMap()
+    }
+
+    @Synchronized
+    fun history(context: Context): History {
+        val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val days = readDays(prefs)
+        prefs.getString(KEY_DAY, null)?.let { days[it] = prefs.getLong(KEY_USED_MICRO, 0L) }
+        val events = org.json.JSONArray(prefs.getString("events", "[]"))
+        return History(days.toSortedMap(), (0 until events.length()).map {
+            val row = events.getJSONObject(it)
+            Event(row.getLong("at"), row.getLong("micro"))
+        }.reversed(), prefs.getString("currency", "CNY") ?: "CNY")
+    }
+
+    /** Hash only; never persist an API key in usage records. */
+    fun sourceId(key: String, baseUrl: String): String = java.security.MessageDigest.getInstance("SHA-256")
+        .digest((baseUrl.trimEnd('/') + "|" + key).toByteArray())
+        .joinToString("") { "%02x".format(it) }
+
     private fun todayKey(): String = DateUtil.nowBeijing().toLocalDate().toString()
 
     /** "29.100000" → 29100000（微元）。 */
@@ -105,7 +173,7 @@ object DailyUsageStore {
         val text = raw?.trim().orEmpty()
         if (text.isEmpty()) return null
         return runCatching {
-            BigDecimal(text).movePointRight(6).setScale(0, RoundingMode.HALF_UP).toLong()
+            BigDecimal(text).movePointRight(6).setScale(0, RoundingMode.HALF_UP).longValueExact()
         }.getOrNull()
     }
 }

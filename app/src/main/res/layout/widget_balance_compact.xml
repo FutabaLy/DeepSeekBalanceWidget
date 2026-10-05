@@ -32,19 +32,13 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <TextView
+        <ImageView
             android:id="@+id/compact_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:ellipsize="end"
-            android:fontFamily="@font/nunito_black"
-            android:letterSpacing="0.02"
-            android:maxLines="1"
-            android:text="@string/widget_title_default"
-            android:textColor="#3A55A8"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            android:scaleType="fitStart"
+            android:adjustViewBounds="true" />
 
         <ImageView
             android:id="@+id/compact_refresh"
@@ -66,18 +60,13 @@
         android:scaleType="centerInside" />
 
     <!-- 第三行：今日已用（出错时显示错误信息） -->
-    <TextView
+    <ImageView
         android:id="@+id/compact_used"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="3dp"
-        android:ellipsize="end"
-        android:fontFamily="@font/nunito_black"
-        android:maxLines="1"
-        android:text="@string/widget_used_placeholder"
-        android:textColor="#8A93A6"
-        android:textSize="11sp"
-        android:textStyle="bold" />
+            android:scaleType="fitStart"
+            android:adjustViewBounds="true" />
 
     <!-- 第四行：峰/谷胶囊 + 倒计时 -->
     <LinearLayout
@@ -88,36 +77,26 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <TextView
+        <ImageView
             android:id="@+id/compact_tier"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_compact_pill_off_peak"
-            android:fontFamily="@font/nunito_black"
-            android:gravity="center"
             android:minWidth="26dp"
             android:paddingStart="9dp"
             android:paddingTop="2dp"
             android:paddingEnd="9dp"
             android:paddingBottom="2dp"
-            android:text="@string/tier_off_short"
-            android:textColor="#FFFFFF"
-            android:textSize="11sp"
-            android:textStyle="bold" />
+            android:scaleType="fitStart"
+            android:adjustViewBounds="true" />
 
-        <TextView
+        <ImageView
             android:id="@+id/compact_countdown"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:ellipsize="end"
-            android:fontFamily="@font/nunito_black"
-            android:letterSpacing="0.04"
-            android:maxLines="1"
-            android:text="@string/widget_countdown_placeholder"
-            android:textColor="#2FA05A"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            android:scaleType="fitStart"
+            android:adjustViewBounds="true" />
     </LinearLayout>
 </LinearLayout>

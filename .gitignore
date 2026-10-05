@@ -13,3 +13,6 @@ captures/
 *.p12
 signing/
 docs/.font-cache/
+
+.gradle-local/
+gradle/wrapper/gradle-wrapper.jar
