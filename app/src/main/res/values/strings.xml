@@ -47,6 +47,4 @@
     <string name="settings_holiday_help">DeepSeek 规定「中国法定节假日全天算空闲时段」。数据来自公开节假日接口，建议每年更新一次。</string>
     <string name="settings_add_widget">添加桌面插件</string>
     <string name="settings_add_widget_help">长按桌面空白处 → 添加小部件 / 桌面工具 → 找到「DeepSeek 余额与峰谷」拖到桌面。</string>
-    <string name="settings_miui">小米(MIUI/HyperOS)必做设置</string>
-    <string name="settings_miui_help">1) 设置 → 应用设置 → 本应用 → 省电策略 → 无限制\n2) 设置 → 应用设置 → 本应用 → 自启动 → 允许\n3) 最近任务里长按本应用卡片 → 加锁（避免被一键清理）\n4) 通知权限必须允许，否则前台服务会被系统停止</string>
 </resources>

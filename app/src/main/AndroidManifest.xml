@@ -14,7 +14,7 @@
     <!-- 开机自动恢复刷新 -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- 引导用户把本应用加入电池优化白名单（小米/MIUI 保活关键） -->
+    <!-- 引导用户把本应用加入电池优化白名单（各家省电策略都会影响前台服务保活） -->
     <uses-permission
         android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
         tools:ignore="BatteryLife" />

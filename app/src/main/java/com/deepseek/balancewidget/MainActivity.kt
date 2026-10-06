@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.deepseek.balancewidget.core.DateUtil
 import com.deepseek.balancewidget.core.HolidayCalendar
+import com.deepseek.balancewidget.core.KeepAliveGuide
 import com.deepseek.balancewidget.core.PeakScheduler
 import com.deepseek.balancewidget.core.WidgetStateBus
 import com.deepseek.balancewidget.data.AppSettings
@@ -561,14 +562,24 @@ private fun SettingsScreen(
                     }
                 }
 
-                // ---- 保活
+                // ---- 保活（按机型给对应品牌的设置路径）
                 SectionCard {
-                    Text("保持刷新（小米/红米必做）", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    val keepAlive = remember { KeepAliveGuide.current() }
+                    Text(
+                        text = "保持刷新（${keepAlive.brand}）",
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "本应用靠前台服务维持秒级刷新；系统一旦把它冻结，就只剩 15 / 30 分钟的兜底刷新。",
+                        color = TextDim,
+                        fontSize = 11.sp,
+                    )
                     Spacer(Modifier.height(6.dp))
-                    BulletText("1. 省电策略设为「无限制」")
-                    BulletText("2. 允许「自启动」")
-                    BulletText("3. 最近任务里给本应用「加锁」，避免被一键清理")
-                    BulletText("4. 允许通知（前台服务需要常驻通知）")
+                    keepAlive.steps.forEachIndexed { index, step ->
+                        BulletText("${index + 1}. $step")
+                    }
+                    BulletText("${keepAlive.steps.size + 1}. 允许通知（前台服务必须常驻通知）")
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = {
@@ -618,7 +629,7 @@ private fun SettingsScreen(
                         text = if (BalanceService.isIgnoringBatteryOptimizations(context)) {
                             "✔ 已加入电池优化白名单"
                         } else {
-                            "⚠ 尚未加入电池优化白名单，MIUI 可能在后台冻结刷新"
+                            "⚠ 尚未加入电池优化白名单，系统可能冻结后台刷新"
                         },
                         color = if (BalanceService.isIgnoringBatteryOptimizations(context)) {
                             OffPeakColor
