@@ -30,7 +30,7 @@ object GradientTextRenderer {
     }
 
     /** 余额大字的字号（sp）。 */
-    const val BALANCE_TEXT_SP = 30f
+    const val BALANCE_TEXT_SP = 34f
 
     /** 渐变起止色：左深蓝 → 右天蓝。 */
     const val BALANCE_GRADIENT_START = 0xFF1B3A8C.toInt()

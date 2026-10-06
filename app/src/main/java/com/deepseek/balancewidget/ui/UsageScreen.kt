@@ -39,6 +39,7 @@ fun UsageScreen(onClose: () -> Unit) {
     var today by remember { mutableStateOf(DateUtil.nowBeijing().toLocalDate()) }
     var query by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf<String?>(null) }
+    var rangeDays by remember { mutableIntStateOf(7) }
     var loaded by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -53,12 +54,13 @@ fun UsageScreen(onClose: () -> Unit) {
     val numberFont = remember { FontFamily(Font(R.font.nunito_black, FontWeight.Black)) }
     val symbol = if (history.currency == "USD") "$" else "¥"
     fun money(value: Long) = symbol + String.format(Locale.ROOT, "%.2f", DailyUsageStore.microToYuan(value))
-    val days = (29L downTo 0L).map { today.minusDays(it).toString() }
-    val peak = history.days.maxByOrNull { it.value }
+    val days = ((rangeDays - 1).toLong() downTo 0L).map { today.minusDays(it).toString() }
+    val rangeUsage = history.days.filterKeys { it >= days.first() && it <= days.last() }
+    val peak = rangeUsage.maxByOrNull { it.value }
     val max = days.maxOf { history.days[it] ?: 0 }.coerceAtLeast(1)
     val zone = remember { ZoneId.of("Asia/Shanghai") }
     val eventsByDay = remember(history.events) { history.events.groupBy { Instant.ofEpochMilli(it.at).atZone(zone).toLocalDate().toString() } }
-    val rows = history.days.entries.sortedByDescending { it.key }.filter { it.key.contains(query.trim()) && (selected == null || it.key == selected) }
+    val rows = rangeUsage.entries.sortedByDescending { it.key }.filter { it.key.contains(query.trim()) && (selected == null || it.key == selected) }
     Surface(Modifier.fillMaxSize(), color = Color(0xFFF5F6FF), contentColor = blue) {
         LazyColumn(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
@@ -68,27 +70,60 @@ fun UsageScreen(onClose: () -> Unit) {
                 }
             }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                    Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("已观测消费 · " + history.currency)
-                        Text(money(history.days.values.sum()), fontFamily = numberFont, fontSize = 36.sp, color = blue)
-                        Text("今日 " + money(history.days[today.toString()] ?: 0) + "   近7天 " + money(history.days.filterKeys { it >= today.minusDays(6).toString() && it <= today.toString() }.values.sum()))
-                        Text(peak?.let { "已知峰值 ${it.key} · ${money(it.value)}" } ?: "开始刷新余额后记录用量", fontSize = 12.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(7, 30).forEach { count ->
+                        FilterChip(
+                            selected = rangeDays == count,
+                            onClick = {
+                                rangeDays = count
+                                selected = null
+                                query = ""
+                            },
+                            label = { Text("近${count}天") },
+                        )
                     }
                 }
             }
             item {
-                Text("近30天消费", fontWeight = FontWeight.Bold)
-                Text("绿柱为今天；左右滑动，点击日期查看记录。灰柱表示未观测。", fontSize = 12.sp)
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.Bottom) {
-                    days.forEach { day ->
-                        val value = history.days[day]
-                        Column(Modifier.width(54.dp).clickable { selected = day }.padding(3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(Modifier.height(130.dp).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
-                                Box(Modifier.width(26.dp).height(if (value == null || value == 0L) 2.dp else (120f * value / max).coerceAtLeast(3f).dp)
-                                    .background(if (value == null) Color.LightGray else if (day == today.toString()) green else blue, RoundedCornerShape(3.dp)))
+                Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                    Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("近${rangeDays}天已观测消费 · " + history.currency)
+                        Text(money(rangeUsage.values.sum()), fontFamily = numberFont, fontSize = 36.sp, color = blue)
+                        Text("今日 " + money(history.days[today.toString()] ?: 0) + "   累计 " + money(history.days.values.sum()))
+                        Text(peak?.let { "本时段峰值 ${it.key} · ${money(it.value)}" } ?: "本时段暂无观测记录", fontSize = 12.sp)
+                    }
+                }
+            }
+            item {
+                Text("近${rangeDays}天消费", fontWeight = FontWeight.Bold)
+                Text(if (rangeDays == 7) "绿柱为今天；点击柱子查看金额。灰柱表示未观测。"
+                    else "绿柱为今天；左右滑动，点击柱子查看金额。灰柱表示未观测。", fontSize = 12.sp)
+                val selectedDay = selected
+                val selectedAmount = selectedDay?.let { history.days[it] }
+                Text(
+                    text = if (selectedDay == null) "点击柱子查看当天消费"
+                        else "$selectedDay · " + (selectedAmount?.let { money(it) } ?: "暂无观测记录"),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    color = blue,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                key(rangeDays) {
+                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                        val columnWidth = if (rangeDays == 7) maxWidth / 7 else 54.dp
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.Bottom) {
+                            days.forEach { day ->
+                                val value = history.days[day]
+                                Column(Modifier.width(columnWidth)
+                                    .background(if (selected == day) blue.copy(alpha = 0.10f) else Color.Transparent, RoundedCornerShape(6.dp))
+                                    .clickable { selected = day; query = "" }.padding(3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(Modifier.height(130.dp).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+                                        Box(Modifier.width(26.dp).height(if (value == null || value == 0L) 2.dp else (120f * value / max).coerceAtLeast(3f).dp)
+                                            .background(if (value == null) Color.LightGray else if (day == today.toString()) green else blue, RoundedCornerShape(3.dp)))
+                                    }
+                                    Text(day.substring(5), fontSize = 10.sp)
+                                }
                             }
-                            Text(day.substring(5), fontSize = 10.sp)
                         }
                     }
                 }
@@ -97,10 +132,10 @@ fun UsageScreen(onClose: () -> Unit) {
                 Text("模型 / Token 用量", fontWeight = FontWeight.Bold)
                 Text("余额接口未提供模型和 Token 明细，暂无法统计模型占比。", fontSize = 12.sp)
                 Spacer(Modifier.height(8.dp))
-                Text("每日与观测明细", fontWeight = FontWeight.Bold)
+                Text("近${rangeDays}天每日与观测明细", fontWeight = FontWeight.Bold)
                 OutlinedTextField(query, { query = it; selected = null }, Modifier.fillMaxWidth(), label = { Text("搜索日期，如 10-06") }, singleLine = true)
                 selected?.let { day ->
-                    TextButton(onClick = { selected = null }) { Text("$day · 显示全部日期") }
+                    TextButton(onClick = { selected = null }) { Text("$day · 显示近${rangeDays}天") }
                 }
             }
             if (rows.isEmpty()) item { Text(if (!loaded) "正在读取…" else if (history.days.isEmpty()) "暂无记录，请先保存 API Key 并刷新余额。" else "所选日期没有观测记录。") }

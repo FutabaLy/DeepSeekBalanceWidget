@@ -62,11 +62,12 @@
     <!-- 第三行：今日已用（出错时显示错误信息） -->
     <ImageView
         android:id="@+id/compact_used"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="3dp"
-            android:scaleType="fitStart"
-            android:adjustViewBounds="true" />
+        android:layout_gravity="start"
+        android:scaleType="centerInside"
+        android:adjustViewBounds="true" />
 
     <!-- 第四行：峰/谷胶囊 + 倒计时 -->
     <LinearLayout

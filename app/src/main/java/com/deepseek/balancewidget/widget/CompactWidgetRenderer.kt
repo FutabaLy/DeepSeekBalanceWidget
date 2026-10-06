@@ -76,7 +76,7 @@ object CompactWidgetRenderer {
         setBalance(context, views, state)
         setText(context, views, R.id.compact_used,
             state.lastError ?: state.usedTodayLine(context.getString(R.string.widget_used_today)),
-            11f, if (state.lastError != null) COLOR_ERROR else COLOR_USED)
+            10f, if (state.lastError != null) COLOR_ERROR else COLOR_USED)
         setText(context, views, R.id.compact_tier,
             state.tier.shortLabel + if (state.autoTier) "" else "*", 11f, COLOR_PILL_TEXT)
         setText(context, views, R.id.compact_countdown,
